@@ -1,0 +1,15 @@
+MOV AX 0000
+MOV BX 0000
+MOV CX 0000
+MOV DX 0000
+inc ax
+add bx 2
+dec Cx
+Mult cx -3
+SuB dx 4
+diu dx -1
+end
+MOV AX 0000
+MOV BX 0000
+MOV CX 0000
+MOV DX 0000

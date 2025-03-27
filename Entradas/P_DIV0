@@ -1,0 +1,11 @@
+MOV ax   0
+inc ax
+MOV bx 1
+MOV cx 2
+muL bx Ax
+add bx 3
+dec bx
+dec ax
+div bx ax
+end
+

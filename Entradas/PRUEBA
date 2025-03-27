@@ -1,0 +1,14 @@
+MOV AX 1
+MOV BX 2
+MOV CX 3
+
+
+ADD CX DX
+SUB CX ax 2 dx
+INC AX
+
+
+MOV DX 4
+
+
+

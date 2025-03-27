@@ -1,0 +1,5 @@
+MOV AX 10dos
+inc ax
+dec bX
+Mul cx 3
+div Bx ax
