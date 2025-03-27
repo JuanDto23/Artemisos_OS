@@ -1,27 +1,8 @@
 #include <stdio.h>                                  
 #include <unistd.h>
 #include <ncurses.h>
+// Bibliotecas propias
 #include "pcb.h"
-
-/*
-    PROTPTIPO: int main(void);
-    
-    PROPOSITO: Establece el flujo de control de todo el programa como tal,
-    y no es una función que invoque.
-    
-    ENTRADAS: «void» asegura que la función no reciba ningún parámetro de entrada.
-    
-    SALIDAS: «0» que significa que todo salió bien. 
-
-    DESCRIPCIÓN: En esta función se declaran las variables de control
-    (buffers, pcb, read flag, etc.). También es la encargada de comprobar 
-    el estado de la bandera de lectura de archivo. Si la bandera de lectura no 
-    está activa, esta función permite la captura de la línea de comandos 
-    (command_handling) para su posterior interpretación. Además, cuando la bandera 
-    de lectura se activa, llama a la función read_line para procesar el archivo 
-    línea por línea.
-    
-*/
 
 int main(void)
 {
@@ -34,6 +15,9 @@ int main(void)
     char line[SIZE_LINE] = {0};                         // Línea leída de archivo
     FILE *f = NULL;                                     // Puntero a archivo abierto en modo lectura
     PCB pcb;                                            // Process Control Process
+    int pid = 1;                                        // Contador que identifica cada pcb
+    int processor_busy = FALSE;                         // Bandera que indica que el procesador está ocupado
+    PCB *detached_pcb = NULL;                           // Nodo pcb desligado al hacer PULL y que se encuentra en el procesador
 
     // Inicializar los registros
     initialize_pcb(&pcb);
@@ -42,14 +26,18 @@ int main(void)
     noecho(); // Evita la impresión automática de caracteres       
     keypad(stdscr, TRUE); // Habilita las teclas especiales
     set_escdelay(10); // Proporciona el tiempo de expiración del ESC en milisegundos
-    print_processor();
-    print_messages();
-    mvprintw(0,2,"Artemisos>");
+    processor_template(); // Se imprime plantilla de la ventana del área del procesador
+    messages_template(); // Se imprime plantilla de la ventana del área de mensajes
+    queue_template(); // Se imprime plantilla de la ventana del área de cola
+    mvprintw(0,2,"Artemisos>"); // Prompt fija donde se escriben los comandos
     while (TRUE) {
         if (!read_flag) {
             // Gestor de comando
-            command_handling(buffers, &read_flag, &c, &index, &f, &index_history);
+            command_handling(buffers, &read_flag, &c, &index, &f, &index_history, 
+                &pid, &processor_busy, &detached_pcb);
         } else {
+            command_handling(buffers, &read_flag, &c, &index, &f, &index_history, 
+                &pid, &processor_busy, &detached_pcb);
             if (!read_line(&f, line)) {
                 fclose(f);
                 read_flag = FALSE;
@@ -75,7 +63,7 @@ int main(void)
                     pcb.PC = 0; // Se reinicia el PC
                 }     
             }
-            move(0,12); // Se coloca el cursor en su lugar
+            move(0,12+(index)); // Se coloca el cursor en su lugar
         }
         refresh();
     }
