@@ -10,8 +10,8 @@ typedef struct queue Queue;
 #define ESC 27
 
 // Número de buffers, tamaño de buffer y tamaño de línea
-#define NUMBER_BUFFERS 6
-#define SIZE_BUFFER 256
+#define NUMBER_BUFFERS 5
+#define SIZE_BUFFER 71
 #define SIZE_LINE 32
 
 // Valores booleanos
@@ -20,7 +20,9 @@ typedef struct queue Queue;
 
 // Intervalo de tiempo antes de la siguiente instrucción
 #define MAX_TIME 100000
-#define STEP_TIME 10000
+
+// Número máximo de niveles
+#define MAX_LEVEL 15
 
 /* Sirve de referencia para indicar la cantidad
    máxima de instrucciones consecutivas que se
@@ -30,16 +32,16 @@ typedef struct queue Queue;
 // Creación del bloque de control de procesos
 typedef struct pcb
 {
-   unsigned pid;
-   long AX;
-   long BX;
-   long CX;
-   long DX;
-   unsigned PC;
-   char IR[100];
-   FILE *program;
-   char file_name[256];
-   struct pcb *next;
+  unsigned pid;
+  long AX;
+  long BX;
+  long CX;
+  long DX;
+  unsigned PC;
+  char IR[100];
+  FILE *program;
+  char file_name[256];
+  struct pcb *next;
 } PCB;
 
 #include "queue.h" // Se incluye para saber el tipo de dato Queue
@@ -54,17 +56,18 @@ void str_upper(char *str);
 int is_numeric(char *str);
 void clear_prompt(int row);
 void clear_messages(void);
-void queues_area(Queue execution, Queue ready, Queue finished);
 int search_register(char *p);
 int value_register(PCB *pcb, char r);
+void loaded_programs_area(int file_counter);
 
 // FUNCIONES PRINCIPALES
 int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
                      int *c, int *index, int *index_history,
-                     Queue *execution, Queue *ready, Queue *finished, 
-                     unsigned *timer, unsigned *init_timer);
+                     Queue *execution, Queue *ready, Queue *finished,
+                     unsigned *timer, unsigned *init_timer, int *file_counter, int *speed_level);
 
-int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finished);
+int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finished,
+                     int *file_counter);
 
 int read_line(FILE **program, char *line);
 int interpret_instruction(char *line, PCB *pcb);
