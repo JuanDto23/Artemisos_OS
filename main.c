@@ -146,7 +146,7 @@ int main(void)
       }
     }
     move(0, 12 + (index)); // Se coloca el cursor en su lugar
-    refresh();
+    refresh(); // Refresca la ventana
   } while (!exited);
   endwin();	// Cierra la ventana
   printf("\n"); // Salto de línea en terminal

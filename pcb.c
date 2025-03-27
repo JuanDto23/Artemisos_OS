@@ -116,6 +116,20 @@ void loaded_programs_area(int file_counter)
   mvprintw(0, 86, "------------------------- PROGRAMAS CARGADOS [%d] ------------------------", file_counter);
 }
 
+// Pregunta si quiere salir del simulador
+int end_simulation(void)
+{
+  // Se imprime mensaje de confirmación
+  mvprintw(14, 4, "¿Seguro que quieres salir? [S/N]: ");
+  // Se obtiene la confirmación
+  char confirmation = toupper(getch());
+  addch(confirmation);
+  if (confirmation == 'S') {
+    return TRUE;
+  }
+  return FALSE;
+}
+
 /*------------------------------FUNCIONES PRINCIPALES------------------------------*/
 // Manejo de comandos ingresados por el usuario en la línea de comandos
 int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
@@ -210,7 +224,7 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
       }
       // Se imprime el nivel de velocidad
       mvprintw(20, 2, "Nivel velocidad: %d  ", *speed_level);
-      mvprintw(21, 2, "init_timer: %d     ", *init_timer);
+      //mvprintw(21, 2, "init_timer: %d     ", *init_timer);
     }
     else if (*c == KEY_LEFT) // Disminuye la velocidad de escritura
     {
@@ -221,37 +235,22 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
       }
       // Se imprime el nivel de velocidad
       mvprintw(20, 2, "Nivel velocidad: %d  ", *speed_level);
-      mvprintw(21, 2, "init_timer: %d     ", *init_timer);
+      //mvprintw(21, 2, "init_timer: %d     ", *init_timer);
     }
     else if (*c == ESC) // Acceso rápido para salir del programa con ESC
     {
-      clear_messages(); // Se limpia el área de mensajes
-      // Se imprime mensaje de confirmación
-      mvprintw(14, 4, "¿Seguro que quieres salir? [S/N]: ");
-      // Se obtiene la confirmación
-      char confirmation = toupper(getch());
-      addch(confirmation);
-      if (confirmation == 'S') // Si la confirmación es S
-      {
-        // Se eliminan todas las colas
-        kill_queue(execution);
-        kill_queue(ready);
-        /* No se llama kill_queue(finished) porque
-        la función cierra los archivos, y en la cola Terminados
-        se supone que los nodos los archivos ya están cerrados */
-        while (finished->head)
-        {
-          PCB *temp = finished->head;
-          finished->head = finished->head->next; // La cabecera almacena el nodo adelante
-          free(temp);
-        }
+      // Se limpia área de mensajes
+      clear_messages();
+      // Se confirma si quiere salir del programa
+      if (end_simulation()) {
+        // Se liberan todas las colas
+        free_queues(execution, ready, finished);
         return 1; // Indica que salió del programa
       }
-      else // Si la confirmación es N
-      {
-        clear_messages(); // Se limpia el área de mensajes
-        move(0, 12);      // Se coloca el cursor en su lugar
-      }
+      // Se limpia área de mensajes
+      clear_messages();
+      // Se coloca el cursor en su lugar
+      move(0, 12);
     }
     else // Si se presionó cualquier otra tecla
     {
@@ -288,32 +287,18 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
   // Se verifica si el comando es EXIT y no tiene parámetros
   if (!(strcmp(command, "EXIT")) && !parameter1[0])
   {
-    // Se imprime mensaje de confirmación
-    mvprintw(14, 4, "¿Seguro que quieres salir? [S/N]: ");
-    // Se obtiene la confirmación
-    char confirmation = toupper(getch());
-    addch(confirmation);
-    if (confirmation == 'S') // Si la confirmación es S
-    {
-      // Se eliminan todas las colas
-      kill_queue(execution);
-      kill_queue(ready);
-      /* No se llama kill_queue(finished) porque
-      la función cierra los archivos, y en la cola Terminados
-      se supone que los nodos los archivos ya están cerrados */
-      while (finished->head)
-      {
-        PCB *temp = finished->head;
-        finished->head = finished->head->next; // La cabecera almacena el nodo adelante
-        free(temp);
-      }
+    // Se limpia área de mensajes
+    clear_messages();
+    // Se confirma si quiere salir del programa
+    if (end_simulation()) {
+      // Se liberan todas las colas
+      free_queues(execution, ready, finished);
       return 1; // Indica que salió del programa
     }
-    else // Si la confirmación es N
-    {
-      clear_messages(); // Se limpia el área de mensajes
-      move(0, 12);      // Se coloca el cursor en su lugar
-    }
+    // Se limpia área de mensajes
+    clear_messages();
+    // Se coloca el cursor en su lugar
+    move(0, 12);
   }
   else if (!strcmp(command, "LOAD")) // Si el comando es LOAD
   {

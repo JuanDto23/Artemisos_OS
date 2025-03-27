@@ -19,5 +19,6 @@ void print_queues(Queue execution, Queue ready, Queue finished);
 PCB *search_pcb(int pid, Queue *queue);
 void kill_queue(Queue *queue);
 int search_file(char *file_name, Queue queue);
+void free_queues(Queue *execution, Queue *ready, Queue *finished);
 
 #endif

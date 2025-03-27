@@ -199,3 +199,26 @@ int search_file(char *file_name, Queue queue)
   }
   return FALSE; // La cola está vacía o no se encontró el archivo
 }
+
+// Libera las colas de Ejecución, Listos y Terminados
+void free_queues(Queue *execution, Queue *ready, Queue *finished)
+{
+  // Se liberan las colas de Ejecución y Listos
+  kill_queue(execution);
+  kill_queue(ready);
+  /* 
+   * No se invoca kill_queue(finished) porque
+   * la función kill_queue cierra los archivos
+   * de los nodos, y en la cola Terminados, se 
+   * supone que el archivo de cada nodo ya se
+   * encuentra cerrado.
+   *
+   * Por lo tanto, se recorre la cola Terminados
+   * donde solo se hace uso de la función free
+   * para liberar cada pcb. */
+  while (finished->head) {
+    PCB *temp = finished->head;
+    finished->head = finished->head->next;
+    free(temp);
+  }
+}

@@ -59,6 +59,7 @@ void clear_messages(void);
 int search_register(char *p);
 int value_register(PCB *pcb, char r);
 void loaded_programs_area(int file_counter);
+int end_simulation(void);
 
 // FUNCIONES PRINCIPALES
 int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
