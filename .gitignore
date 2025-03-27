@@ -1,0 +1,10 @@
+# Ignorar la carpeta de configuración de VS Code
+.vscode/
+  
+# Ignorar la carpeta de configuración de CLion
+.idea/
+
+# Ignorar compilados y archivos temporales
+*.o
+*.out
+*.log
