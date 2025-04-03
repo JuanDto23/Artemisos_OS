@@ -10,8 +10,8 @@
 
 // Variables globales (menos pbase que se ocupa al crear el pcb)
 // Se ocupan para calcular la nueva prioridad y el uso del CPU del proceso y usuario
-int IncCPU = 60 / MAXQUANTUM;
-int NumUs = 0;
+int IncCPU = 60 / MAXQUANTUM; 
+int NumUs = 0; 
 double W = 0.0; // Después el peso es 1/NumUs
 
 /*------------------------------FUNCIONES DE INICIALIZACIÓN------------------------------*/
@@ -62,7 +62,7 @@ int is_numeric(char *str)
   {
     if (!isdigit(*str))
       return FALSE; // Si se encuentra un carácter no numérico, regresar 0
-    str++;
+    str++; 
   }
   return TRUE; // Si todos los caracteres son dígitos, regresar 1
 }
@@ -116,10 +116,10 @@ int value_register(PCB *pcb, char r)
   return -1;
 }
 
-// Se imprime la cantidad de programas cargados en su área
-void loaded_programs_area(int file_counter)
+// Se imprime la cantidad de usuarios iniciados en sesión
+void users_area(int NumUs)
 {
-  mvprintw(0, 86, "------------------------- PROGRAMAS CARGADOS [%d] ------------------------", file_counter);
+  mvprintw(0, 86, "----------------------------------- USUARIOS EN SESION [%d] ----------------------------------", NumUs);
 }
 
 // Pregunta si quiere salir del simulador
@@ -133,7 +133,7 @@ int end_simulation(void)
   if (confirmation == 'S')
   {
     return TRUE;
-  }
+  } 
   return FALSE;
 }
 
@@ -142,7 +142,7 @@ int end_simulation(void)
 int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished,
-                     unsigned *timer, unsigned *init_timer, int *file_counter, int *speed_level)
+                     unsigned *timer, unsigned *init_timer, int *speed_level)
 {
   // Si se presionó una tecla en la terminal (kbhit)
   if (kbhit())
@@ -155,8 +155,7 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
       // Se le coloca carácter nulo para finalizar la cadena prompt
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
-      exited = evaluate_command(buffers[0], execution, ready, finished,
-                                file_counter);
+      exited = evaluate_command(buffers[0], execution, ready, finished);
       // Se crea historial
       for (int i = NUMBER_BUFFERS - 1; i >= 0; i--)
       {
@@ -276,25 +275,25 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
 }
 
 // Evalúa los comandos ingresados por el usuario
-int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finished,
-                     int *file_counter)
+int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finished)
 {
   /* TOKENS */
   char command[256] = {0};
   char parameter1[256] = {0};
-  int parameter2 = -1; // Sscanf también puede extraer de la cadena un entero. Ocupas un puntero
-                      //(dirección de memoria de la variable donde almacenará el token)
-  // char parameter2[2] = {0}; // Almacenar el id de usuario
+  char parameter2[256] = {0};   // Almacena el id de usuario, se analiza con is_numeric
+  int value_par2 = 0;       // Almacena el uid como valor numerico
   int pid_to_search = 0; // Variable para almacenar el pid del pcb a matar
   FILE *file = NULL;
-
+  
   // Se separa en tokens el comando leído de prompt
-  sscanf(buffer, "%s %s %d", command, parameter1, &parameter2);
+  sscanf(buffer, "%s %s %s", command, parameter1, parameter2); // Que pasa si como segundo parámetro es una a?
 
   // Se convierte el comando a mayúsculas
   str_upper(command);
 
   clear_messages(); // Se limpia el área de mensajes
+
+  //mvprintw(30, 5, "%s", parameter2);
 
   // Se verifica si el comando es EXIT y no tiene parámetros
   if (!(strcmp(command, "EXIT")) && !parameter1[0])
@@ -318,8 +317,9 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
     if (parameter1[0]) // Se indicó un archivo a cargar
     {
       // Se verifica si se especificó un id de usuario valido (entero)
-      if (isdigit(parameter2) && parameter2 != -1)  
+      if (is_numeric(parameter2))  
       {
+        value_par2=atoi(parameter2);
         // Se abre el archivo en modo lectura
         file = fopen(parameter1, "r");
         if (file)
@@ -328,12 +328,12 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
             Se verifica si el usuario es nuevo o no (tiene algún proceso en Ejecución o Listos).
             Si no tienen ninguno, se incrementa el NumUs
           */
-          if (!search_uid(parameter2, *execution) && !search_uid(parameter2, *ready))
+          if (!search_uid(value_par2, *execution) && !search_uid(value_par2, *ready))
           {
             NumUs++;
           }
           // Inserta el nodo en la cola Listos
-          enqueue(create_pcb(&ready->pid, parameter1, &file, parameter2), ready);
+          enqueue(create_pcb(&ready->pid, parameter1, &file, value_par2), ready);
           (ready->pid)++;
         }
         else // Si el archivo no existe
@@ -342,13 +342,13 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
         }
       }
       // No metió un id de usuario
-      else if(isdigit(parameter2) && parameter2 == -1)
+      else if(parameter2[0] =='\0')
       {
         mvprintw(14, 4, "Error: Debes ingresar un id de usuario");
       }
       // Metió otra cosa que no es un entero
       else{
-        mvprintw(14, 4, "Error: Debes id de usuario incorrecto");
+        mvprintw(14, 4, "Error: Id de usuario incorrecto");
       }
     }
     else // Si no se especificó un archivo
@@ -366,13 +366,18 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
         // Se convierte el parámetro a valor numérico
         pid_to_search = atoi(parameter1);
         // Se busca y extrae el pcb solicitado en Ejecución
-        PCB *pcb_extracted = search_pcb(pid_to_search, execution);
+        PCB *pcb_extracted = search_pcb(pid_to_search, execution);  // Hay 2 opciones, que el pcb a matar este en ejecución o en ready, comenzamos con ejecución 
         if (pcb_extracted) // El pcb se encontró en la cola de Ejecución
         {
           // Es necesario cerrar el archivo antes de pasar a la cola de Ejecución
           fclose(pcb_extracted->program);
           // Evita puntero colgante
           pcb_extracted->program = NULL;
+          // Ya no es necesario buscar el usuario en la cola de Ejecución
+          if (!search_uid(pcb_extracted->UID, *ready))
+          {
+              NumUs--;
+          }
           // Se encola el pcb en Terminados
           enqueue(pcb_extracted, finished);
           // Se limpia el área procesador y se imprime mensaje de terminación
@@ -385,6 +390,10 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           fclose(pcb_extracted->program);
           // Evita puntero colgante
           pcb_extracted->program = NULL;
+          if (!search_uid(pcb_extracted->UID, *ready) && !search_uid(pcb_extracted->UID, *execution))
+          {
+            NumUs--;
+          }
           // Se encola el pcb en Terminados
           enqueue(pcb_extracted, finished);
           // Se imprime mensaje de terminación
@@ -393,15 +402,6 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
         else // El pcb no se encontró en ninguna cola
         {
           mvprintw(14, 4, "Error: no se pudo encontrar el pcb con pid [%d].", pid_to_search); // No se encontro el índice
-        }
-
-        /*
-          Se verifica la existencia repetida del programa eliminado en Ejecución y Listos.
-          Si no está, se decrementa file_counter.
-        */
-        if (!search_file(pcb_extracted->file_name, *execution) && !search_file(pcb_extracted->file_name, *ready))
-        {
-          (*file_counter)--;
         }
       }
       else // Si el parámetro no es numérico

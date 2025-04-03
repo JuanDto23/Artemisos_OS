@@ -18,7 +18,7 @@ int main(void)
   int speed_level = 1; // Nivel de velocidad de lectura de instrucciones
   unsigned timer = 0; // Temporizador para determinar la velocidad de escritura
   unsigned init_timer = 0; // Inicializador para timer, reduce la brecha entre MAX_TIME
-  int file_counter = 0; // Contador de los programas diferentes cargados (Ejecución o Listos)
+  //int file_counter = 0; // Contador de los programas diferentes cargados (Ejecución o Listos)
 
   // Se instancían las colas
   Queue execution;
@@ -37,7 +37,7 @@ int main(void)
   processor_template(); // Se imprime plantilla de la ventana del área del procesador
   messages_template(); // Se imprime plantilla de la ventana del área de mensajes
   print_queues(execution, ready, finished); // Se imprimen las colas en su área
-  loaded_programs_area(file_counter); // Se imprime la cantidad de programas cargados
+  users_area(NumUs); // Se imprime la cantidad de programas cargados
   mvprintw(0, 2, "Artemisos>"); // Prompt fija donde se escriben los comandos
   do
   {
@@ -46,7 +46,7 @@ int main(void)
       // Gestor de comandos de terminal
       exited = command_handling(buffers, &c, &index, &index_history,
                                 &execution, &ready, &finished,
-                                &timer, &init_timer, &file_counter, &speed_level);
+                                &timer, &init_timer, &speed_level);
       if (ready.head) // Verifica si hay nodos en la cola Listos
       {
         enqueue(dequeue(&ready), &execution); // Se extrae el primer nodo y se pasa a Ejecución
@@ -60,7 +60,7 @@ int main(void)
         // Gestor de comandos de terminal
         exited = command_handling(buffers, &c, &index, &index_history,
                                   &execution, &ready, &finished,
-                                  &timer, &init_timer, &file_counter, &speed_level);
+                                  &timer, &init_timer, &speed_level);
       }
       else // Si se alcanzó el MAX_TIME se ejecuta la instrucción
       {
@@ -75,8 +75,8 @@ int main(void)
           // Se limpia el área de mensaje
           clear_messages();
           // Se verifica que el programa no se encuentra en Listos
-          if(!search_file(execution.head->file_name, ready)) {
-            file_counter--;    
+          if(!search_uid(execution.head->UID, ready)) {
+            NumUs--;    
           }
           // Se extrae proceso de Ejecución y se encola a Terminados
           enqueue(dequeue(&execution), &finished);
@@ -117,9 +117,9 @@ int main(void)
               mvprintw(15, 4, "Programa finalizado correctamente.");
             }
             // Se verifica que el programa no se encuentra en Listos
-            if (!search_file(execution.head->file_name, ready))
+            if (!search_uid(execution.head->UID, ready))
             {
-              file_counter--;
+              NumUs--;
             }
             // Se extrae nodo en ejecución y encola en Terminados
             enqueue(dequeue(&execution), &finished);
@@ -141,7 +141,7 @@ int main(void)
           }
         }
         timer = init_timer; // Se reinicia temporizador para volver a escribir en línea de comandos
-        loaded_programs_area(file_counter); // Se imprime la cantidad de programas cargados
+        users_area(NumUs); // Se imprime la cantidad de programas cargados
         print_queues(execution, ready, finished); // Se imprimen las colas en su área
       }
     }

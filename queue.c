@@ -107,28 +107,28 @@ void print_queues(Queue execution, Queue ready, Queue finished)
   int i = 0;
 
   // Se imprime la plantilla de las colas
-  mvprintw(row, col, "------------------------------EJECUCION----------------------------------          ");
+  mvprintw(row, col, "----------------------------------------EJECUCION--------------------------------------------          ");
   for (row = 7, i = 0; execution.head != NULL; i++, row++)
   {
-    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]             ",
+    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d]             ",
              execution.head->pid, execution.head->file_name, execution.head->AX, execution.head->BX,
-             execution.head->CX, execution.head->DX, execution.head->PC, execution.head->IR);
+             execution.head->CX, execution.head->DX, execution.head->PC, execution.head->IR, execution.head->UID);
     execution.head = execution.head->next;
   }
-  mvprintw(row, col, "--------------------------------LISTOS-----------------------------------          ");
+  mvprintw(row, col, "------------------------------------------LISTOS---------------------------------------------          ");
   for (i = 0, row = row + 1; ready.head != NULL; i++, row++)
   {
-    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]             ",
+    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d]             ",
              ready.head->pid, ready.head->file_name, ready.head->AX, ready.head->BX,
-             ready.head->CX, ready.head->DX, ready.head->PC, ready.head->IR);
+             ready.head->CX, ready.head->DX, ready.head->PC, ready.head->IR, ready.head->UID);
     ready.head = ready.head->next;
   }
-  mvprintw(row, col, "-----------------------------TERMINADOS----------------------------------          ");
+  mvprintw(row, col, "---------------------------------------TERMINADOS--------------------------------------------          ");
   for (i = 0, row = row + 1; finished.head != NULL; i++, row++)
   {
-    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]             ",
+    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d]             ",
              finished.head->pid, finished.head->file_name, finished.head->AX, finished.head->BX,
-             finished.head->CX, finished.head->DX, finished.head->PC, finished.head->IR);
+             finished.head->CX, finished.head->DX, finished.head->PC, finished.head->IR, finished.head->UID);
     finished.head = finished.head->next;
   }
   // Se actualiza la pantalla

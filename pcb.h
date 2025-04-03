@@ -4,6 +4,9 @@
 // Declaración adelantada de Queue
 typedef struct queue Queue;
 
+// Se declara bariable externa para poderla consultar en todos los archivos en incluyan al header
+extern int NumUs;
+
 // Valores numéricos obtenidos de kbwhat.c
 #define ENTER 10
 #define BACKSPACE 127
@@ -63,17 +66,16 @@ void clear_prompt(int row);
 void clear_messages(void);
 int search_register(char *p);
 int value_register(PCB *pcb, char r);
-void loaded_programs_area(int file_counter);
+void users_area(int NumUs);
 int end_simulation(void);
 
 // FUNCIONES PRINCIPALES
 int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished,
-                     unsigned *timer, unsigned *init_timer, int *file_counter, int *speed_level);
+                     unsigned *timer, unsigned *init_timer, int *speed_level);
 
-int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finished,
-                     int *file_counter);
+int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finished);
 
 int read_line(FILE **program, char *line);
 int interpret_instruction(char *line, PCB *pcb);
