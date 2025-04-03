@@ -4,6 +4,9 @@
 #include <ncurses.h>
 #include "queue.h"
 
+// Variable global
+int PBase = 60;
+
 // Inicializa la cola
 void initialize_queue(Queue *queue)
 {
@@ -13,7 +16,7 @@ void initialize_queue(Queue *queue)
 }
 
 // Crea un PCB y lo retorna
-PCB *create_pcb(int *pid, char *file_name, FILE **program)
+PCB *create_pcb(int *pid, char *file_name, FILE **program, int uid)
 {
   PCB *pcb = NULL; // Nodo a retornar
 
@@ -29,6 +32,12 @@ PCB *create_pcb(int *pid, char *file_name, FILE **program)
     strcpy(pcb->file_name, file_name); // No se puede asignar cadenas diréctamente
     pcb->program = *program;
     pcb->next = NULL;
+    // Se inicializan los campos recién agregados
+    pcb -> UID = uid;
+    pcb -> P = PBase;
+    // EStos se inicializan a cero?? Supongo
+    pcb -> KCPU = 0;
+    pcb -> KCPUxU = 0;
   }
   else
   {
@@ -176,8 +185,8 @@ void kill_queue(Queue *queue)
   }
 }
 
-// Verifica si el archivo se encuentra en la cola pasada como parámetro
-int search_file(char *file_name, Queue queue)
+// Verifica si el usuario es dueño de un proceso en la cola pasada como parámetro
+int search_uid(int uid, Queue queue)
 {
   PCB *current = NULL;
   int found = FALSE;
@@ -185,8 +194,8 @@ int search_file(char *file_name, Queue queue)
   current = queue.head;
   while (current && !found)
   {
-    // Se comprueba que el archivo coincida con el archivo del nodo actual
-    found = !(strcmp(current->file_name, file_name));
+    // Se comprueba que el id usuario coincida con el dueño del nodo actual
+    found = (current -> UID == uid);
     if (!found)
     {
       // Se avanza al siguiente nodo de la lista
@@ -195,9 +204,9 @@ int search_file(char *file_name, Queue queue)
   }
   if (current)
   {
-    return TRUE; // Se encontró el archivo en la cola
+    return TRUE; // Se encontró el usuario en la cola
   }
-  return FALSE; // La cola está vacía o no se encontró el archivo
+  return FALSE; // La cola está vacía o no se encontró el usuario
 }
 
 // Libera las colas de Ejecución, Listos y Terminados

@@ -11,14 +11,14 @@ typedef struct queue
 } Queue;
 
 void initialize_queue(Queue *queue);
-PCB *create_pcb(int *pid, char *file_name, FILE **program);
+PCB *create_pcb(int *pid, char *file_name, FILE **program, int iud);
 void enqueue(PCB *pcb, Queue *queue);
 PCB *dequeue(Queue *queue);
 void remove_pcb(PCB **pcb);
 void print_queues(Queue execution, Queue ready, Queue finished);
 PCB *search_pcb(int pid, Queue *queue);
 void kill_queue(Queue *queue);
-int search_file(char *file_name, Queue queue);
+int search_uid(int uid, Queue queue);
 void free_queues(Queue *execution, Queue *ready, Queue *finished);
 
 #endif

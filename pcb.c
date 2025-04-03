@@ -8,6 +8,12 @@
 #include "pcb.h"
 #include "queue.h"
 
+// Variables globales (menos pbase que se ocupa al crear el pcb)
+// Se ocupan para calcular la nueva prioridad y el uso del CPU del proceso y usuario
+int IncCPU = 60 / MAXQUANTUM;
+int NumUs = 0;
+double W = 0.0; // Después el peso es 1/NumUs
+
 /*------------------------------FUNCIONES DE INICIALIZACIÓN------------------------------*/
 // Inicializa el buffer y el índice
 void initialize_buffer(char *buffer, int *index)
@@ -124,7 +130,8 @@ int end_simulation(void)
   // Se obtiene la confirmación
   char confirmation = toupper(getch());
   addch(confirmation);
-  if (confirmation == 'S') {
+  if (confirmation == 'S')
+  {
     return TRUE;
   }
   return FALSE;
@@ -148,11 +155,12 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
       // Se le coloca carácter nulo para finalizar la cadena prompt
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
-      exited = evaluate_command(buffers[0], execution, ready, finished, 
+      exited = evaluate_command(buffers[0], execution, ready, finished,
                                 file_counter);
       // Se crea historial
-      for(int i = NUMBER_BUFFERS - 1; i >= 0; i--) {
-        strcpy(buffers[i], buffers[i-1]);
+      for (int i = NUMBER_BUFFERS - 1; i >= 0; i--)
+      {
+        strcpy(buffers[i], buffers[i - 1]);
       }
       // Se Reinicia índice de historial
       *index_history = 0;
@@ -173,12 +181,12 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
       if (*index > 0)
       {
         // Se decrementa el índice
-        (*index)--; 
+        (*index)--;
         // Se sustituye el cáracter a eliminar por espacio en blanco
-        mvaddch(getcury(stdscr), getcurx(stdscr) - 1, ' '); 
+        mvaddch(getcury(stdscr), getcurx(stdscr) - 1, ' ');
         // Mueve el cursor hacia atrás
-        move(getcury(stdscr), getcurx(stdscr) - 1); 
-        //delch(); // Elimina el carácter en la posición actual
+        move(getcury(stdscr), getcurx(stdscr) - 1);
+        // delch(); // Elimina el carácter en la posición actual
       }
     }
     else if (*c == KEY_UP) // Avanza a buffers superiores
@@ -219,30 +227,31 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
     {
       if (*speed_level < MAX_LEVEL) // Que no sobrepase el límite máximo de niveles
       {
-        (*init_timer) += MAX_TIME / ((int) pow(2, *speed_level)); // Se incrementa el temporizador
-        (*speed_level)++; // Se incrementa el nivel de velocidad
+        (*init_timer) += MAX_TIME / ((int)pow(2, *speed_level)); // Se incrementa el temporizador
+        (*speed_level)++;                                        // Se incrementa el nivel de velocidad
       }
       // Se imprime el nivel de velocidad
       mvprintw(20, 2, "Nivel velocidad: %d  ", *speed_level);
-      //mvprintw(21, 2, "init_timer: %d     ", *init_timer);
+      // mvprintw(21, 2, "init_timer: %d     ", *init_timer);
     }
     else if (*c == KEY_LEFT) // Disminuye la velocidad de escritura
     {
       if (*speed_level > 1) // Que sea mayor que el nivel 1 de velocidad
       {
-        (*init_timer) -= MAX_TIME / ((int) pow(2, *speed_level - 1)); // Se decrementa el temporizador
-        (*speed_level)--; // Se decrementa el nivel de velocidad
+        (*init_timer) -= MAX_TIME / ((int)pow(2, *speed_level - 1)); // Se decrementa el temporizador
+        (*speed_level)--;                                            // Se decrementa el nivel de velocidad
       }
       // Se imprime el nivel de velocidad
       mvprintw(20, 2, "Nivel velocidad: %d  ", *speed_level);
-      //mvprintw(21, 2, "init_timer: %d     ", *init_timer);
+      // mvprintw(21, 2, "init_timer: %d     ", *init_timer);
     }
     else if (*c == ESC) // Acceso rápido para salir del programa con ESC
     {
       // Se limpia área de mensajes
       clear_messages();
       // Se confirma si quiere salir del programa
-      if (end_simulation()) {
+      if (end_simulation())
+      {
         // Se liberan todas las colas
         free_queues(execution, ready, finished);
         return 1; // Indica que salió del programa
@@ -254,7 +263,8 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
     }
     else // Si se presionó cualquier otra tecla
     {
-      if (*index < SIZE_BUFFER-1) {
+      if (*index < SIZE_BUFFER - 1)
+      {
         // Concatena la tecla presionada al buffer para su posterior impresión
         buffers[0][(*index)++] = *c;
         mvaddch(0, 11 + (*index), *c);
@@ -272,12 +282,14 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
   /* TOKENS */
   char command[256] = {0};
   char parameter1[256] = {0};
-  // char parameter2[128] = {0};
+  int parameter2 = -1; // Sscanf también puede extraer de la cadena un entero. Ocupas un puntero
+                      //(dirección de memoria de la variable donde almacenará el token)
+  // char parameter2[2] = {0}; // Almacenar el id de usuario
   int pid_to_search = 0; // Variable para almacenar el pid del pcb a matar
   FILE *file = NULL;
 
   // Se separa en tokens el comando leído de prompt
-  sscanf(buffer, "%s %s", command, parameter1);
+  sscanf(buffer, "%s %s %d", command, parameter1, &parameter2);
 
   // Se convierte el comando a mayúsculas
   str_upper(command);
@@ -290,7 +302,8 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
     // Se limpia área de mensajes
     clear_messages();
     // Se confirma si quiere salir del programa
-    if (end_simulation()) {
+    if (end_simulation())
+    {
       // Se liberan todas las colas
       free_queues(execution, ready, finished);
       return 1; // Indica que salió del programa
@@ -304,24 +317,38 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
   {
     if (parameter1[0]) // Se indicó un archivo a cargar
     {
-      // Se abre el archivo en modo lectura
-      file = fopen(parameter1, "r");
-      if (file)
+      // Se verifica si se especificó un id de usuario valido (entero)
+      if (isdigit(parameter2) && parameter2 != -1)  
       {
-        /* 
-          Se verifica si el archivo (parameter1) se encuentra en Ejecución y Listos.
-          Si no está, se incrementa file_counter.
-        */
-        if (!search_file(parameter1, *execution) && !search_file(parameter1, *ready)) {
-          (*file_counter)++;
+        // Se abre el archivo en modo lectura
+        file = fopen(parameter1, "r");
+        if (file)
+        {
+          /*
+            Se verifica si el usuario es nuevo o no (tiene algún proceso en Ejecución o Listos).
+            Si no tienen ninguno, se incrementa el NumUs
+          */
+          if (!search_uid(parameter2, *execution) && !search_uid(parameter2, *ready))
+          {
+            NumUs++;
+          }
+          // Inserta el nodo en la cola Listos
+          enqueue(create_pcb(&ready->pid, parameter1, &file, parameter2), ready);
+          (ready->pid)++;
         }
-        // Inserta el nodo en la cola Listos
-        enqueue(create_pcb(&ready->pid, parameter1, &file), ready);
-        (ready->pid)++;
+        else // Si el archivo no existe
+        {
+          mvprintw(14, 4, "Error: archivo %s no existe.", parameter1);
+        }
       }
-      else // Si el archivo no existe
+      // No metió un id de usuario
+      else if(isdigit(parameter2) && parameter2 == -1)
       {
-        mvprintw(14, 4, "Error: archivo %s no existe.", parameter1);
+        mvprintw(14, 4, "Error: Debes ingresar un id de usuario");
+      }
+      // Metió otra cosa que no es un entero
+      else{
+        mvprintw(14, 4, "Error: Debes id de usuario incorrecto");
       }
     }
     else // Si no se especificó un archivo
@@ -345,7 +372,7 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           // Es necesario cerrar el archivo antes de pasar a la cola de Ejecución
           fclose(pcb_extracted->program);
           // Evita puntero colgante
-          pcb_extracted->program = NULL; 
+          pcb_extracted->program = NULL;
           // Se encola el pcb en Terminados
           enqueue(pcb_extracted, finished);
           // Se limpia el área procesador y se imprime mensaje de terminación
@@ -357,7 +384,7 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           // Es necesario cerrar el archivo antes de pasar a la cola de Ejecución
           fclose(pcb_extracted->program);
           // Evita puntero colgante
-          pcb_extracted->program = NULL; 
+          pcb_extracted->program = NULL;
           // Se encola el pcb en Terminados
           enqueue(pcb_extracted, finished);
           // Se imprime mensaje de terminación
@@ -368,11 +395,12 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           mvprintw(14, 4, "Error: no se pudo encontrar el pcb con pid [%d].", pid_to_search); // No se encontro el índice
         }
 
-        /* 
+        /*
           Se verifica la existencia repetida del programa eliminado en Ejecución y Listos.
           Si no está, se decrementa file_counter.
         */
-        if (!search_file(pcb_extracted->file_name, *execution) && !search_file(pcb_extracted->file_name, *ready)) {
+        if (!search_file(pcb_extracted->file_name, *execution) && !search_file(pcb_extracted->file_name, *ready))
+        {
           (*file_counter)--;
         }
       }

@@ -42,6 +42,11 @@ typedef struct pcb
   FILE *program;
   char file_name[256];
   struct pcb *next;
+  // Nuevas variables para el Fair Share Schedule (equitativo)
+  int UID;  // Id de usuario
+  int P;  // Prioridad
+  int KCPU; // Uso de CPU por proceso
+  int KCPUxU; // Uso de CPU por usuario
 } PCB;
 
 #include "queue.h" // Se incluye para saber el tipo de dato Queue
