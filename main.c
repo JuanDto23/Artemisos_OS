@@ -19,7 +19,8 @@ int main(void)
   unsigned timer = 0; // Temporizador para determinar la velocidad de escritura
   unsigned init_timer = 0; // Inicializador para timer, reduce la brecha entre MAX_TIME
   //int file_counter = 0; // Contador de los programas diferentes cargados (Ejecución o Listos)
-
+  int minor_priority = 0; // Variable para saber que nodo extraer de ready para mandarlo a ejecución
+  int uid_execution = 0;  // Almacena el uid del proceso actualmente en ejecución
   // Se instancían las colas
   Queue execution;
   Queue ready;
@@ -49,7 +50,10 @@ int main(void)
                                 &timer, &init_timer, &speed_level);
       if (ready.head) // Verifica si hay nodos en la cola Listos
       {
-        enqueue(dequeue(&ready), &execution); // Se extrae el primer nodo y se pasa a Ejecución
+        //enqueue(dequeue(&ready), &execution); // Se extrae el primer nodo y se pasa a Ejecución
+        // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
+        minor_priority = get_minor_priority(ready);
+        enqueue(get_priority_pcb(minor_priority, &ready),&execution);
         quantum = 0; // Se establece en 0 para el proceso que acaba de entrar
       }
     }
@@ -65,7 +69,7 @@ int main(void)
       else // Si se alcanzó el MAX_TIME se ejecuta la instrucción
       {
         /* Si no hay más líneas del archivo por leer, esto es,
-        si no se encuentra END y no hay ningún error */
+        si no se encuentra END, lo que representa un error*/
         if (!read_line(&execution.head->program, line))
         {
           // Cierra el archivo
@@ -74,13 +78,15 @@ int main(void)
           execution.head->program = NULL;
           // Se limpia el área de mensaje
           clear_messages();
-          // Se verifica que el programa no se encuentra en Listos
+          // Se verifica que no hay otro proceso del mismo usuario en Listos
           if(!search_uid(execution.head->UID, ready)) {
-            NumUs--;    
+            NumUs--;
+            // Se decrementa el peso por usuarios en sesion, ya se fue el bro
+            W--;    
           }
           // Se extrae proceso de Ejecución y se encola a Terminados
           enqueue(dequeue(&execution), &finished);
-          mvprintw(15, 4, "Terminación anormal del programa..");
+          mvprintw(15, 4, "Terminación anormal del programa..");   
           // Se limpia el área de procesador
           processor_template();
         }
@@ -101,8 +107,17 @@ int main(void)
             quantum++;
             // Se actualizan la impresión de los registros del pcb en ejecución
             print_registers(*execution.head);
+            
+            // HAY UN PROCESO EN EJECUCIÓN Y AÚN NO TERMINA SU QUANTUM
+            // Se actualizan los valores de uso de CPU para el proceso en ejecución (KCPU)
+            execution.head-> KCPU += IncCPU;  // Va dando saltos de 15 en 15
+            // Se obtiene el uid del proceso actualmente en ejecución
+            uid_execution = execution.head -> UID;
+            // Se actualizan los contadores de uso de cpu (KCPUxU) para TODOS los procesos 
+            // no terminados (ready y execution) del mismo usuario. KCPUxU también dará saltos de 15 en 15
+            // Hacer función de reccorrer la cola listos y en todos los procesos con uid parar a atualizar
           }
-          else // Se encontró la instrucción END o un error
+          else // Se encontró la instrucción END o un error, en cuarquier caso terminar el pcb
           {
             // Cierra el archivo
             fclose(execution.head->program);
@@ -116,10 +131,11 @@ int main(void)
             {
               mvprintw(15, 4, "Programa finalizado correctamente.");
             }
-            // Se verifica que el programa no se encuentra en Listos
-            if (!search_uid(execution.head->UID, ready))
-            {
+            // Se verifica que no hay otro proceso del mismo usuario en Listos
+            if(!search_uid(execution.head->UID, ready)) {
               NumUs--;
+              // Se decrementa el peso por usuarios en sesion, ya se fue el bro
+              W--;    
             }
             // Se extrae nodo en ejecución y encola en Terminados
             enqueue(dequeue(&execution), &finished);
@@ -131,9 +147,16 @@ int main(void)
             if (ready.head) // Se verifica si hay proceso en Listos
             {
               // Sacar el único nodo en Ejecución, e insertarlo al final de Listos
-              enqueue((dequeue(&execution)), &ready);
+             enqueue((dequeue(&execution)), &ready);
+
               // Sacar un nodo de Listos y pasarlo a Ejecución
-              enqueue((dequeue(&ready)), &execution);
+              //enqueue((dequeue(&ready)), &execution);
+              // Ya no se saca el primer nodo de listos
+              // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
+              minor_priority = get_minor_priority(ready);
+              mvprintw(40,3,"                                                                            ");
+              mvprintw(40,3,"Nodo de menor prioridad que entró a ejecución %d",minor_priority);
+              enqueue(get_priority_pcb(minor_priority, &ready),&execution);
             }
             /* Se reinicia para comenzar a ejecutar
             el siguiente proceso o el mismo si no hay más */

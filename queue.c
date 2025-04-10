@@ -3,9 +3,7 @@
 #include <string.h>
 #include <ncurses.h>
 #include "queue.h"
-
-// Variable global
-int PBase = 60;
+#include "pcb.h"  // Se ocupa para la variable PBase
 
 // Inicializa la cola
 void initialize_queue(Queue *queue)
@@ -38,6 +36,9 @@ PCB *create_pcb(int *pid, char *file_name, FILE **program, int uid)
     // EStos se inicializan a cero?? Supongo
     pcb -> KCPU = 0;
     pcb -> KCPUxU = 0;
+
+    // Para verificar que siempre se mete el de menor prioridad.
+    PBase++;
   }
   else
   {
@@ -110,32 +111,32 @@ void print_queues(Queue execution, Queue ready, Queue finished)
   mvprintw(row, col, "----------------------------------------EJECUCION--------------------------------------------          ");
   for (row = 7, i = 0; execution.head != NULL; i++, row++)
   {
-    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d]             ",
+    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d] P:[%d]          ",
              execution.head->pid, execution.head->file_name, execution.head->AX, execution.head->BX,
-             execution.head->CX, execution.head->DX, execution.head->PC, execution.head->IR, execution.head->UID);
+             execution.head->CX, execution.head->DX, execution.head->PC, execution.head->IR, execution.head->UID, execution.head->P);
     execution.head = execution.head->next;
   }
   mvprintw(row, col, "------------------------------------------LISTOS---------------------------------------------          ");
   for (i = 0, row = row + 1; ready.head != NULL; i++, row++)
   {
-    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d]             ",
+    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d] P:[%d]          ",
              ready.head->pid, ready.head->file_name, ready.head->AX, ready.head->BX,
-             ready.head->CX, ready.head->DX, ready.head->PC, ready.head->IR, ready.head->UID);
+             ready.head->CX, ready.head->DX, ready.head->PC, ready.head->IR, ready.head->UID, ready.head->P);
     ready.head = ready.head->next;
   }
   mvprintw(row, col, "---------------------------------------TERMINADOS--------------------------------------------          ");
   for (i = 0, row = row + 1; finished.head != NULL; i++, row++)
   {
-    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d]             ",
+    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d] P:[%d]          ",
              finished.head->pid, finished.head->file_name, finished.head->AX, finished.head->BX,
-             finished.head->CX, finished.head->DX, finished.head->PC, finished.head->IR, finished.head->UID);
+             finished.head->CX, finished.head->DX, finished.head->PC, finished.head->IR, finished.head->UID, finished.head->P);
     finished.head = finished.head->next;
   }
   // Se actualiza la pantalla
   refresh();
 }
 
-// Busca un PCB en la cola y lo extrae
+// Busca un PCB en la cola de acuerdo a su pid y lo extrae
 PCB *search_pcb(int pid, Queue *queue) // Busca el pcb con el id especificado y lo regresa
 {
   PCB *current = NULL; // Nodo actual de la cola
@@ -231,3 +232,65 @@ void free_queues(Queue *execution, Queue *ready, Queue *finished)
     free(temp);
   }
 }
+
+// Función que recorre toda la lista y retorna la menor prioridad de todos ellos
+// Después con esa prioridad se hace la extracción similar a search_pcb que lo extrae
+// Por pid (cuando haces kill).
+int get_minor_priority(Queue  queue)
+{
+  PCB * aux = queue.head;
+  int min = aux -> P; // La primera prioridad es la menor
+  if(!aux){
+    return -1;  // Cola vacía, no sirve, lo verifica el ready.head
+  }
+  else{
+    while(aux){
+      if(aux -> P <= min){  
+        min = aux -> P;
+      }
+      aux = aux -> next;
+    }
+    // Se llegó al final de la cola
+    return min;
+  }
+}
+
+// Busca un PCB en la cola de acuerdo a su prioridad y lo extrae
+PCB * get_priority_pcb(int priority, Queue *queue) // Busca el pcb con el id especificado y lo regresa
+{
+  PCB *current = NULL; // Nodo actual de la cola
+  PCB *before = NULL;  // Nodo anterior al actual
+  int found = FALSE;   // Indica si se encontró el nodo
+
+  // Se inicializan los nodos auxiliares
+  current = queue->head;
+  before = current;
+
+  // Se busca el nodo con la prioridad especificada
+  while (current && !found)
+  {
+    found = (current -> P == priority); // Válida si se busca el primer nodo
+    if (!found)                    // Si no se ha encontrado el nodo avanza al siguiente
+    {
+      before = current;
+      current = current->next;
+    }
+  }
+
+  if (current) // Si se encontró el nodo
+  {
+    if (current == queue->head) // Si es el primer nodo
+    {
+      queue->head = current->next; // Se mueve la cabecera al segundo elemento
+    }
+    else // Si no es el primer nodo
+    {
+      before->next = current->next; // Se ligan los nodos del hueco
+    }
+    current->next = NULL; // Se desliga el nodo de la cola
+    (queue->elements)--;  // Se decrementa el número de elementos
+    return current;       // Se retorna el nodo encontrado
+  }
+  return NULL; // La cola está vacía, o se llegó al final sin encontrarlo
+}
+

@@ -1,7 +1,10 @@
 #ifndef _QUEUE_H
 #define _QUEUE_H
 
-#include "pcb.h" // Se incluye para saber el tipo de dato PCB
+//#include "pcb.h" // Se incluye para saber el tipo de dato PCB
+
+// Declaración adelantada de tipo PCB 
+typedef struct pcb PCB;
 
 typedef struct queue
 {
@@ -20,5 +23,6 @@ PCB *search_pcb(int pid, Queue *queue);
 void kill_queue(Queue *queue);
 int search_uid(int uid, Queue queue);
 void free_queues(Queue *execution, Queue *ready, Queue *finished);
-
+int get_minor_priority(Queue queue);  // Regresa la menor prioridad de la lista
+PCB * get_priority_pcb(int priority, Queue * queue);  // Desencola ya no el primero, si no el importante
 #endif

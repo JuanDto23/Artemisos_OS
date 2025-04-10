@@ -8,11 +8,14 @@
 #include "pcb.h"
 #include "queue.h"
 
+
 // Variables globales (menos pbase que se ocupa al crear el pcb)
 // Se ocupan para calcular la nueva prioridad y el uso del CPU del proceso y usuario
+
 int IncCPU = 60 / MAXQUANTUM; 
 int NumUs = 0; 
 double W = 0.0; // Después el peso es 1/NumUs
+int PBase = 60;
 
 /*------------------------------FUNCIONES DE INICIALIZACIÓN------------------------------*/
 // Inicializa el buffer y el índice
@@ -331,6 +334,8 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           if (!search_uid(value_par2, *execution) && !search_uid(value_par2, *ready))
           {
             NumUs++;
+            // Se incrementa el peso W en base a la cantidad de usuarios dueños de procesos no terminados
+            W++;
           }
           // Inserta el nodo en la cola Listos
           enqueue(create_pcb(&ready->pid, parameter1, &file, value_par2), ready);
@@ -377,6 +382,7 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           if (!search_uid(pcb_extracted->UID, *ready))
           {
               NumUs--;
+              W--;
           }
           // Se encola el pcb en Terminados
           enqueue(pcb_extracted, finished);
@@ -393,6 +399,7 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           if (!search_uid(pcb_extracted->UID, *ready) && !search_uid(pcb_extracted->UID, *execution))
           {
             NumUs--;
+            W--;
           }
           // Se encola el pcb en Terminados
           enqueue(pcb_extracted, finished);
@@ -403,6 +410,9 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
         {
           mvprintw(14, 4, "Error: no se pudo encontrar el pcb con pid [%d].", pid_to_search); // No se encontro el índice
         }
+        // Se imprime W para verificar su funcionamiento
+        mvprintw(33,4,"                       ");
+        mvprintw(33,4,"%f", W);
       }
       else // Si el parámetro no es numérico
       {

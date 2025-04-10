@@ -4,9 +4,6 @@
 // Declaración adelantada de Queue
 typedef struct queue Queue;
 
-// Se declara bariable externa para poderla consultar en todos los archivos en incluyan al header
-extern int NumUs;
-
 // Valores numéricos obtenidos de kbwhat.c
 #define ENTER 10
 #define BACKSPACE 127
@@ -52,7 +49,18 @@ typedef struct pcb
   int KCPUxU; // Uso de CPU por usuario
 } PCB;
 
-#include "queue.h" // Se incluye para saber el tipo de dato Queue
+// Se declara variable externa para poderla consultar en todos los archivos en incluyan al header
+// Las puse todas aquí, solo se importan en donde se ocupen. Abajo porque ocupaban MAXQUANTUM
+// SOLO SE DECLARAN, SE INICIALIZAN DONDE COMIENZAN A USARSE, le adelantas al compilador que después por ahí habrá una variable llamada así
+// ESto no reserva memoria, hasta que se inicializan. Solo se debe hacer una vez.
+extern int NumUs;
+extern int IncCPU; 
+extern int NumUs; 
+extern double W; 
+extern int PBase;
+
+//#include "queue.h" // Se incluye para saber el tipo de dato Queue
+// Si pcb ya incluye a queue, con ese jalaría para importarlo en los demás archivos no???
 
 /*-------------------PROTOTIPOS -------------------*/
 
