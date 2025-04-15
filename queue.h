@@ -1,8 +1,6 @@
 #ifndef _QUEUE_H
 #define _QUEUE_H
 
-//#include "pcb.h" // Se incluye para saber el tipo de dato PCB
-
 // Declaración adelantada de tipo PCB 
 typedef struct pcb PCB;
 
@@ -19,10 +17,12 @@ void enqueue(PCB *pcb, Queue *queue);
 PCB *dequeue(Queue *queue);
 void remove_pcb(PCB **pcb);
 void print_queues(Queue execution, Queue ready, Queue finished);
-PCB *search_pcb(int pid, Queue *queue);
+PCB *extract_by_pid(int pid, Queue *queue);
 void kill_queue(Queue *queue);
 int search_uid(int uid, Queue queue);
 void free_queues(Queue *execution, Queue *ready, Queue *finished);
-int get_minor_priority(Queue queue);  // Regresa la menor prioridad de la lista
-PCB * get_priority_pcb(int priority, Queue * queue);  // Desencola ya no el primero, si no el importante
+int get_minor_priority(Queue queue);  
+PCB *extract_by_priority(int priority, Queue * queue);
+void update_KCPUxU_per_process(int uid, Queue *queue);
+void update_parameters(Queue *queue);
 #endif

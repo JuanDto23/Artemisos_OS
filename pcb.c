@@ -8,14 +8,13 @@
 #include "pcb.h"
 #include "queue.h"
 
-
 // Variables globales (menos pbase que se ocupa al crear el pcb)
 // Se ocupan para calcular la nueva prioridad y el uso del CPU del proceso y usuario
 
-int IncCPU = 60 / MAXQUANTUM; 
-int NumUs = 0; 
+int IncCPU = 60 / MAXQUANTUM;
+int NumUs = 0;
 double W = 0.0; // Después el peso es 1/NumUs
-int PBase = 60;
+const int PBase = 60;
 
 /*------------------------------FUNCIONES DE INICIALIZACIÓN------------------------------*/
 // Inicializa el buffer y el índice
@@ -65,7 +64,7 @@ int is_numeric(char *str)
   {
     if (!isdigit(*str))
       return FALSE; // Si se encuentra un carácter no numérico, regresar 0
-    str++; 
+    str++;
   }
   return TRUE; // Si todos los caracteres son dígitos, regresar 1
 }
@@ -120,9 +119,9 @@ int value_register(PCB *pcb, char r)
 }
 
 // Se imprime la cantidad de usuarios iniciados en sesión
-void users_area(int NumUs)
+void general_info_area(Queue execution)
 {
-  mvprintw(0, 86, "----------------------------------- USUARIOS EN SESION [%d] ----------------------------------", NumUs);
+  mvprintw(0, 86, "----------------------------------- Usuarios:[%d] MinP:[%d] W:[%.2f] ----------------------------------", NumUs, execution.head->P, W);
 }
 
 // Pregunta si quiere salir del simulador
@@ -136,7 +135,7 @@ int end_simulation(void)
   if (confirmation == 'S')
   {
     return TRUE;
-  } 
+  }
   return FALSE;
 }
 
@@ -283,11 +282,11 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
   /* TOKENS */
   char command[256] = {0};
   char parameter1[256] = {0};
-  char parameter2[256] = {0};   // Almacena el id de usuario, se analiza con is_numeric
-  int value_par2 = 0;       // Almacena el uid como valor numerico
-  int pid_to_search = 0; // Variable para almacenar el pid del pcb a matar
+  char parameter2[256] = {0}; // Almacena el id de usuario, se analiza con is_numeric
+  int value_par2 = 0;         // Almacena el uid como valor numerico
+  int pid_to_search = 0;      // Variable para almacenar el pid del pcb a matar
   FILE *file = NULL;
-  
+
   // Se separa en tokens el comando leído de prompt
   sscanf(buffer, "%s %s %s", command, parameter1, parameter2); // Que pasa si como segundo parámetro es una a?
 
@@ -296,7 +295,7 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
 
   clear_messages(); // Se limpia el área de mensajes
 
-  //mvprintw(30, 5, "%s", parameter2);
+  // mvprintw(30, 5, "%s", parameter2);
 
   // Se verifica si el comando es EXIT y no tiene parámetros
   if (!(strcmp(command, "EXIT")) && !parameter1[0])
@@ -320,9 +319,9 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
     if (parameter1[0]) // Se indicó un archivo a cargar
     {
       // Se verifica si se especificó un id de usuario valido (entero)
-      if (is_numeric(parameter2))  
+      if (is_numeric(parameter2))
       {
-        value_par2=atoi(parameter2);
+        value_par2 = atoi(parameter2);
         // Se abre el archivo en modo lectura
         file = fopen(parameter1, "r");
         if (file)
@@ -334,8 +333,6 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           if (!search_uid(value_par2, *execution) && !search_uid(value_par2, *ready))
           {
             NumUs++;
-            // Se incrementa el peso W en base a la cantidad de usuarios dueños de procesos no terminados
-            W++;
           }
           // Inserta el nodo en la cola Listos
           enqueue(create_pcb(&ready->pid, parameter1, &file, value_par2), ready);
@@ -347,12 +344,13 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
         }
       }
       // No metió un id de usuario
-      else if(parameter2[0] =='\0')
+      else if (parameter2[0] == '\0')
       {
         mvprintw(14, 4, "Error: Debes ingresar un id de usuario");
       }
       // Metió otra cosa que no es un entero
-      else{
+      else
+      {
         mvprintw(14, 4, "Error: Id de usuario incorrecto");
       }
     }
@@ -371,8 +369,8 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
         // Se convierte el parámetro a valor numérico
         pid_to_search = atoi(parameter1);
         // Se busca y extrae el pcb solicitado en Ejecución
-        PCB *pcb_extracted = search_pcb(pid_to_search, execution);  // Hay 2 opciones, que el pcb a matar este en ejecución o en ready, comenzamos con ejecución 
-        if (pcb_extracted) // El pcb se encontró en la cola de Ejecución
+        PCB *pcb_extracted = extract_by_pid(pid_to_search, execution); // Hay 2 opciones, que el pcb a matar este en ejecución o en ready, comenzamos con ejecución
+        if (pcb_extracted)                                         // El pcb se encontró en la cola de Ejecución
         {
           // Es necesario cerrar el archivo antes de pasar a la cola de Ejecución
           fclose(pcb_extracted->program);
@@ -381,16 +379,24 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           // Ya no es necesario buscar el usuario en la cola de Ejecución
           if (!search_uid(pcb_extracted->UID, *ready))
           {
-              NumUs--;
-              W--;
+            NumUs--;
           }
           // Se encola el pcb en Terminados
           enqueue(pcb_extracted, finished);
           // Se limpia el área procesador y se imprime mensaje de terminación
           processor_template();
           mvprintw(14, 4, "El pcb con pid [%d] ha sido terminado", pid_to_search);
+          // Se actualiza el valor de W
+          if (NumUs)
+          {
+            W = 1 / NumUs;
+          }
+          else
+          {
+            W = 0.0; // No hay ningún usuario
+          }
         }
-        else if ((pcb_extracted = search_pcb(pid_to_search, ready))) // El pcb se encontró en la cola de Listos
+        else if ((pcb_extracted = extract_by_pid(pid_to_search, ready))) // El pcb se encontró en la cola de Listos
         {
           // Es necesario cerrar el archivo antes de pasar a la cola de Ejecución
           fclose(pcb_extracted->program);
@@ -399,20 +405,25 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           if (!search_uid(pcb_extracted->UID, *ready) && !search_uid(pcb_extracted->UID, *execution))
           {
             NumUs--;
-            W--;
           }
           // Se encola el pcb en Terminados
           enqueue(pcb_extracted, finished);
           // Se imprime mensaje de terminación
           mvprintw(14, 4, "El pcb con pid [%d] ha sido terminado", pid_to_search);
+          // Se actualiza el valor de W
+          if (NumUs)
+          {
+            W = 1 / NumUs;
+          }
+          else
+          {
+            W = 0.0; // No hay ningún usuario
+          }
         }
         else // El pcb no se encontró en ninguna cola
         {
           mvprintw(14, 4, "Error: no se pudo encontrar el pcb con pid [%d].", pid_to_search); // No se encontro el índice
         }
-        // Se imprime W para verificar su funcionamiento
-        mvprintw(33,4,"                       ");
-        mvprintw(33,4,"%f", W);
       }
       else // Si el parámetro no es numérico
       {

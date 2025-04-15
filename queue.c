@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <ncurses.h>
+#include <limits.h> // Para usar el int_max
 #include "queue.h"
-#include "pcb.h"  // Se ocupa para la variable PBase
+#include "pcb.h" // Se ocupa para la variable PBase
 
 // Inicializa la cola
 void initialize_queue(Queue *queue)
@@ -31,14 +32,12 @@ PCB *create_pcb(int *pid, char *file_name, FILE **program, int uid)
     pcb->program = *program;
     pcb->next = NULL;
     // Se inicializan los campos recién agregados
-    pcb -> UID = uid;
-    pcb -> P = PBase;
-    // EStos se inicializan a cero?? Supongo
-    pcb -> KCPU = 0;
-    pcb -> KCPUxU = 0;
-
-    // Para verificar que siempre se mete el de menor prioridad.
-    PBase++;
+    pcb->UID = uid;
+    pcb->P = PBase;
+    pcb->KCPU = 0;
+    pcb->KCPUxU = 0;
+    // Actualizar el valor de la variable global W = 1/NumUs
+    W = 1.0 / NumUs;
   }
   else
   {
@@ -111,25 +110,25 @@ void print_queues(Queue execution, Queue ready, Queue finished)
   mvprintw(row, col, "----------------------------------------EJECUCION--------------------------------------------          ");
   for (row = 7, i = 0; execution.head != NULL; i++, row++)
   {
-    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d] P:[%d]          ",
-             execution.head->pid, execution.head->file_name, execution.head->AX, execution.head->BX,
-             execution.head->CX, execution.head->DX, execution.head->PC, execution.head->IR, execution.head->UID, execution.head->P);
+    mvprintw(row, col, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]      ",
+             execution.head->pid, execution.head->UID, execution.head->P, execution.head->KCPU, execution.head->KCPUxU, execution.head->file_name, 
+             execution.head->AX, execution.head->BX, execution.head->CX, execution.head->DX, execution.head->PC, execution.head->IR);
     execution.head = execution.head->next;
   }
-  mvprintw(row, col, "------------------------------------------LISTOS---------------------------------------------          ");
+  mvprintw(row, col, "------------------------------------------LISTOS---------------------------------------------      ");
   for (i = 0, row = row + 1; ready.head != NULL; i++, row++)
   {
-    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d] P:[%d]          ",
-             ready.head->pid, ready.head->file_name, ready.head->AX, ready.head->BX,
-             ready.head->CX, ready.head->DX, ready.head->PC, ready.head->IR, ready.head->UID, ready.head->P);
+    mvprintw(row, col, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]      ",
+             ready.head->pid, ready.head->UID, ready.head->P, ready.head->KCPU, ready.head->KCPUxU, ready.head->file_name, ready.head->AX, ready.head->BX,
+             ready.head->CX, ready.head->DX, ready.head->PC, ready.head->IR);
     ready.head = ready.head->next;
   }
-  mvprintw(row, col, "---------------------------------------TERMINADOS--------------------------------------------          ");
+  mvprintw(row, col, "---------------------------------------TERMINADOS--------------------------------------------      ");
   for (i = 0, row = row + 1; finished.head != NULL; i++, row++)
   {
-    mvprintw(row, col, "PID:[%u] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s] UID:[%d] P:[%d]          ",
-             finished.head->pid, finished.head->file_name, finished.head->AX, finished.head->BX,
-             finished.head->CX, finished.head->DX, finished.head->PC, finished.head->IR, finished.head->UID, finished.head->P);
+    mvprintw(row, col, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]      ",
+             finished.head->pid, finished.head->UID, finished.head->P, finished.head->KCPU, finished.head->KCPUxU, finished.head->file_name, 
+             finished.head->AX, finished.head->BX, finished.head->CX, finished.head->DX, finished.head->PC, finished.head->IR);
     finished.head = finished.head->next;
   }
   // Se actualiza la pantalla
@@ -137,7 +136,7 @@ void print_queues(Queue execution, Queue ready, Queue finished)
 }
 
 // Busca un PCB en la cola de acuerdo a su pid y lo extrae
-PCB *search_pcb(int pid, Queue *queue) // Busca el pcb con el id especificado y lo regresa
+PCB * extract_by_pid(int pid, Queue *queue) // Busca el pcb con el id especificado y lo regresa
 {
   PCB *current = NULL; // Nodo actual de la cola
   PCB *before = NULL;  // Nodo anterior al actual
@@ -196,7 +195,7 @@ int search_uid(int uid, Queue queue)
   while (current && !found)
   {
     // Se comprueba que el id usuario coincida con el dueño del nodo actual
-    found = (current -> UID == uid);
+    found = (current->UID == uid);
     if (!found)
     {
       // Se avanza al siguiente nodo de la lista
@@ -216,47 +215,54 @@ void free_queues(Queue *execution, Queue *ready, Queue *finished)
   // Se liberan las colas de Ejecución y Listos
   kill_queue(execution);
   kill_queue(ready);
-  /* 
+  /*
    * No se invoca kill_queue(finished) porque
    * la función kill_queue cierra los archivos
-   * de los nodos, y en la cola Terminados, se 
+   * de los nodos, y en la cola Terminados, se
    * supone que el archivo de cada nodo ya se
    * encuentra cerrado.
    *
    * Por lo tanto, se recorre la cola Terminados
    * donde solo se hace uso de la función free
    * para liberar cada pcb. */
-  while (finished->head) {
+  while (finished->head)
+  {
     PCB *temp = finished->head;
     finished->head = finished->head->next;
     free(temp);
   }
 }
 
-// Función que recorre toda la lista y retorna la menor prioridad de todos ellos
-// Después con esa prioridad se hace la extracción similar a search_pcb que lo extrae
-// Por pid (cuando haces kill).
-int get_minor_priority(Queue  queue)
+// Busca la menor prioridad entre todos los procesos de la cola
+int get_minor_priority(Queue queue)
 {
-  PCB * aux = queue.head;
-  int min = aux -> P; // La primera prioridad es la menor
-  if(!aux){
-    return -1;  // Cola vacía, no sirve, lo verifica el ready.head
+  PCB *aux = queue.head; // Nodo auxiliar para recorrer la cola
+
+  // Si la cola está vacía, se regresa 0
+  if (!aux)
+  {
+    return INT_MAX;  // Para que no pueda ser considerado como la menor prioridad
   }
-  else{
-    while(aux){
-      if(aux -> P <= min){  
-        min = aux -> P;
-      }
-      aux = aux -> next;
+
+  int min = aux->P; // Se considera la prioridad del primer nodo como la menor
+
+  /* Se recorre la cola y va verificando si hay una menor prioridad
+   que la que se consideró inicialmente */
+  while (aux)
+  {
+    // Verifica si la prioridad del nodo actual es menor que la que se tiene almacenada
+    if (aux -> P < min)
+    {
+      min = aux->P; // Se actualiza la menor prioridad hasta el momento
     }
-    // Se llegó al final de la cola
-    return min;
+    aux = aux->next; // Se avanza al siguiente nodo
   }
+
+  return min; // Se retorna la menor proridad
 }
 
 // Busca un PCB en la cola de acuerdo a su prioridad y lo extrae
-PCB * get_priority_pcb(int priority, Queue *queue) // Busca el pcb con el id especificado y lo regresa
+PCB * extract_by_priority(int priority, Queue *queue) // Busca el pcb con el id especificado y lo regresa
 {
   PCB *current = NULL; // Nodo actual de la cola
   PCB *before = NULL;  // Nodo anterior al actual
@@ -269,8 +275,8 @@ PCB * get_priority_pcb(int priority, Queue *queue) // Busca el pcb con el id esp
   // Se busca el nodo con la prioridad especificada
   while (current && !found)
   {
-    found = (current -> P == priority); // Válida si se busca el primer nodo
-    if (!found)                    // Si no se ha encontrado el nodo avanza al siguiente
+    found = (current->P == priority); // Válida si se busca el primer nodo
+    if (!found)                       // Si no se ha encontrado el nodo avanza al siguiente
     {
       before = current;
       current = current->next;
@@ -294,3 +300,36 @@ PCB * get_priority_pcb(int priority, Queue *queue) // Busca el pcb con el id esp
   return NULL; // La cola está vacía, o se llegó al final sin encontrarlo
 }
 
+// Actualiza los contadores de uso del CPU para todos los procesos (no Terminados) del usuario dueño del proceso de la cola
+void update_KCPUxU_per_process(int uid, Queue *queue)
+{
+  PCB *current = queue->head; // Nodo actual
+
+  // Se actualiza KCPUxU de cada proceso de la cola que sea del usuario UID
+  while (current)
+  {
+    // El proceso es del usuario UID
+    if (current->UID == uid)
+    {
+      current->KCPUxU += IncCPU; // Se actualiza KCPUxU
+    }
+    current = current->next; // Se avanza al siguiente nodo
+  }
+}
+
+// Actualiza los parámetros de planificación, para todos los nodos de la cola
+void update_parameters(Queue *queue)
+{
+  PCB *current = queue->head; // Nodo actual
+
+  // Se actualizan los parámetros de los nodos de la cola
+
+  // 2 procesos de un usuario. W = 1
+  while (current) {
+    current -> KCPU /= 2;
+    current -> KCPUxU /= 2;
+    // Se deben actualizar todos al mismo tiempo???
+    current -> P = PBase + (current -> KCPU)/2  + (current -> KCPUxU)/(4 * W);
+    current = current->next; // Se avanza al siguiente nodo
+  }
+}

@@ -7,20 +7,19 @@
 
 int main(void)
 {
-  int exited = FALSE; // Indica si salió (ESC ó EXIT)
+  int exited = FALSE;                              // Indica si salió (ESC ó EXIT)
   char buffers[NUMBER_BUFFERS][SIZE_BUFFER] = {0}; // Buffers de historial
-  int c = 0; // Carácter introducido por usuario
-  int index = 0; // índice de buffer de prompt
-  int result_interpretation = 0; // Retorno de interpretar la instrucción leída
-  int index_history = 0; // Índice de buffer de historial seleccionado (↑ o ↓)
-  char line[SIZE_LINE] = {0}; // Línea leída de archivo
-  int quantum = 0; // Contador para el número de instrucciones antes de alcanzar el MAXQUANTUM
-  int speed_level = 1; // Nivel de velocidad de lectura de instrucciones
-  unsigned timer = 0; // Temporizador para determinar la velocidad de escritura
-  unsigned init_timer = 0; // Inicializador para timer, reduce la brecha entre MAX_TIME
-  //int file_counter = 0; // Contador de los programas diferentes cargados (Ejecución o Listos)
-  int minor_priority = 0; // Variable para saber que nodo extraer de ready para mandarlo a ejecución
-  int uid_execution = 0;  // Almacena el uid del proceso actualmente en ejecución
+  int c = 0;                                       // Carácter introducido por usuario
+  int index = 0;                                   // índice de buffer de prompt
+  int result_interpretation = 0;                   // Retorno de interpretar la instrucción leída
+  int index_history = 0;                           // Índice de buffer de historial seleccionado (↑ o ↓)
+  char line[SIZE_LINE] = {0};                      // Línea leída de archivo
+  int quantum = 0;                                 // Contador para el número de instrucciones antes de alcanzar el MAXQUANTUM
+  int speed_level = 1;                             // Nivel de velocidad de lectura de instrucciones
+  unsigned timer = 0;                              // Temporizador para determinar la velocidad de escritura
+  unsigned init_timer = 0;                         // Inicializador para timer, reduce la brecha entre MAX_TIME
+  int minor_priority = 0;                          // Variable para saber que nodo extraer de ready para mandarlo a ejecución
+
   // Se instancían las colas
   Queue execution;
   Queue ready;
@@ -31,15 +30,14 @@ int main(void)
   initialize_queue(&ready);
   initialize_queue(&finished);
 
-  initscr(); // Inicia la ventana
-  noecho(); // Evita la impresión automática de caracteres
-  keypad(stdscr, TRUE); // Habilita las teclas especiales
-  set_escdelay(10); // Proporciona el tiempo de expiración del ESC en milisegundos
-  processor_template(); // Se imprime plantilla de la ventana del área del procesador
-  messages_template(); // Se imprime plantilla de la ventana del área de mensajes
+  initscr();                                // Inicia la ventana
+  noecho();                                 // Evita la impresión automática de caracteres
+  keypad(stdscr, TRUE);                     // Habilita las teclas especiales
+  set_escdelay(10);                         // Proporciona el tiempo de expiración del ESC en milisegundos
+  processor_template();                     // Se imprime plantilla de la ventana del área del procesador
+  messages_template();                      // Se imprime plantilla de la ventana del área de mensajes
   print_queues(execution, ready, finished); // Se imprimen las colas en su área
-  users_area(NumUs); // Se imprime la cantidad de programas cargados
-  mvprintw(0, 2, "Artemisos>"); // Prompt fija donde se escriben los comandos
+  mvprintw(0, 2, "Artemisos>");             // Prompt fija donde se escriben los comandos
   do
   {
     if (!execution.head) // Si la cola Ejecución está vacía
@@ -50,10 +48,10 @@ int main(void)
                                 &timer, &init_timer, &speed_level);
       if (ready.head) // Verifica si hay nodos en la cola Listos
       {
-        //enqueue(dequeue(&ready), &execution); // Se extrae el primer nodo y se pasa a Ejecución
-        // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
+        // enqueue(dequeue(&ready), &execution); // Se extrae el primer nodo y se pasa a Ejecución
+        //  Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
         minor_priority = get_minor_priority(ready);
-        enqueue(get_priority_pcb(minor_priority, &ready),&execution);
+        enqueue(extract_by_priority(minor_priority, &ready), &execution);
         quantum = 0; // Se establece en 0 para el proceso que acaba de entrar
       }
     }
@@ -79,14 +77,22 @@ int main(void)
           // Se limpia el área de mensaje
           clear_messages();
           // Se verifica que no hay otro proceso del mismo usuario en Listos
-          if(!search_uid(execution.head->UID, ready)) {
+          if (!search_uid(execution.head->UID, ready))
+          {
             NumUs--;
-            // Se decrementa el peso por usuarios en sesion, ya se fue el bro
-            W--;    
           }
           // Se extrae proceso de Ejecución y se encola a Terminados
           enqueue(dequeue(&execution), &finished);
-          mvprintw(15, 4, "Terminación anormal del programa..");   
+          // Se actualiza el valor de W
+          if (NumUs)
+          {
+            W = 1.0 / NumUs;
+          }
+          else
+          {
+            W = 0.0; // No hay ningún usuario
+          }
+          mvprintw(15, 4, "Terminación anormal del programa..");
           // Se limpia el área de procesador
           processor_template();
         }
@@ -107,15 +113,11 @@ int main(void)
             quantum++;
             // Se actualizan la impresión de los registros del pcb en ejecución
             print_registers(*execution.head);
-            
-            // HAY UN PROCESO EN EJECUCIÓN Y AÚN NO TERMINA SU QUANTUM
             // Se actualizan los valores de uso de CPU para el proceso en ejecución (KCPU)
-            execution.head-> KCPU += IncCPU;  // Va dando saltos de 15 en 15
-            // Se obtiene el uid del proceso actualmente en ejecución
-            uid_execution = execution.head -> UID;
-            // Se actualizan los contadores de uso de cpu (KCPUxU) para TODOS los procesos 
-            // no terminados (ready y execution) del mismo usuario. KCPUxU también dará saltos de 15 en 15
-            // Hacer función de reccorrer la cola listos y en todos los procesos con uid parar a atualizar
+            execution.head->KCPU += IncCPU; // Saltos de 15
+            /* Actualiza los contadores de uso del CPU para todos los procesos (no Terminados)
+              del usuario dueño del proceso en ejecución */
+            update_KCPUxU_per_process(execution.head->UID, &ready);
           }
           else // Se encontró la instrucción END o un error, en cuarquier caso terminar el pcb
           {
@@ -132,10 +134,18 @@ int main(void)
               mvprintw(15, 4, "Programa finalizado correctamente.");
             }
             // Se verifica que no hay otro proceso del mismo usuario en Listos
-            if(!search_uid(execution.head->UID, ready)) {
+            if (!search_uid(execution.head->UID, ready))
+            {
               NumUs--;
-              // Se decrementa el peso por usuarios en sesion, ya se fue el bro
-              W--;    
+            }
+            // Se actualiza el valor de W
+            if (NumUs)
+            {
+              W = 1.0 / NumUs;
+            }
+            else
+            {
+              W = 0.0; // No hay ningún usuario
             }
             // Se extrae nodo en ejecución y encola en Terminados
             enqueue(dequeue(&execution), &finished);
@@ -144,34 +154,30 @@ int main(void)
           }
           if (quantum == MAXQUANTUM) // quantum llegó a MAXQUANTUM (4) y aún no se llega al fin del archivo
           {
-            if (ready.head) // Se verifica si hay proceso en Listos
+            if (ready.head) // Se verifica si hay proceso en Listos para hacer el SWAP
             {
               // Sacar el único nodo en Ejecución, e insertarlo al final de Listos
-             enqueue((dequeue(&execution)), &ready);
-
-              // Sacar un nodo de Listos y pasarlo a Ejecución
-              //enqueue((dequeue(&ready)), &execution);
-              // Ya no se saca el primer nodo de listos
-              // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
+              enqueue((dequeue(&execution)), &ready);
+              // Actualiza los parámetros de planificación, para todos los nodos de la cola Listos
+              update_parameters(&ready);      
+              // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad y se extrae
               minor_priority = get_minor_priority(ready);
-              mvprintw(40,3,"                                                                            ");
-              mvprintw(40,3,"Nodo de menor prioridad que entró a ejecución %d",minor_priority);
-              enqueue(get_priority_pcb(minor_priority, &ready),&execution);
+              enqueue(extract_by_priority(minor_priority, &ready), &execution);
             }
             /* Se reinicia para comenzar a ejecutar
             el siguiente proceso o el mismo si no hay más */
             quantum = 0;
           }
         }
-        timer = init_timer; // Se reinicia temporizador para volver a escribir en línea de comandos
-        users_area(NumUs); // Se imprime la cantidad de programas cargados
+        timer = init_timer;                       // Se reinicia temporizador para volver a escribir en línea de comandos
+        general_info_area(execution);             // Se imprime información general
         print_queues(execution, ready, finished); // Se imprimen las colas en su área
       }
     }
     move(0, 12 + (index)); // Se coloca el cursor en su lugar
-    refresh(); // Refresca la ventana
+    refresh();             // Refresca la ventana
   } while (!exited);
-  endwin();	// Cierra la ventana
+  endwin();     // Cierra la ventana
   printf("\n"); // Salto de línea en terminal
   return 0;
 }

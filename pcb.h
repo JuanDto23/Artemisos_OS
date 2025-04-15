@@ -43,9 +43,9 @@ typedef struct pcb
   char file_name[256];
   struct pcb *next;
   // Nuevas variables para el Fair Share Schedule (equitativo)
-  int UID;  // Id de usuario
-  int P;  // Prioridad
-  int KCPU; // Uso de CPU por proceso
+  int UID;    // Id de usuario
+  int P;      // Prioridad
+  int KCPU;   // Uso de CPU por proceso
   int KCPUxU; // Uso de CPU por usuario
 } PCB;
 
@@ -54,13 +54,10 @@ typedef struct pcb
 // SOLO SE DECLARAN, SE INICIALIZAN DONDE COMIENZAN A USARSE, le adelantas al compilador que después por ahí habrá una variable llamada así
 // ESto no reserva memoria, hasta que se inicializan. Solo se debe hacer una vez.
 extern int NumUs;
-extern int IncCPU; 
-extern int NumUs; 
-extern double W; 
-extern int PBase;
-
-//#include "queue.h" // Se incluye para saber el tipo de dato Queue
-// Si pcb ya incluye a queue, con ese jalaría para importarlo en los demás archivos no???
+extern int IncCPU;
+extern int NumUs;
+extern double W;
+extern const int PBase;
 
 /*-------------------PROTOTIPOS -------------------*/
 
@@ -74,7 +71,7 @@ void clear_prompt(int row);
 void clear_messages(void);
 int search_register(char *p);
 int value_register(PCB *pcb, char r);
-void users_area(int NumUs);
+void general_info_area(Queue execution);
 int end_simulation(void);
 
 // FUNCIONES PRINCIPALES
@@ -92,4 +89,4 @@ void messages_template(void);
 void print_history(char buffers[NUMBER_BUFFERS][SIZE_BUFFER]);
 void print_registers(PCB pcb);
 
-#endif
+#endif  
