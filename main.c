@@ -2,8 +2,10 @@
 #include <unistd.h>
 #include <ncurses.h>
 #include <string.h>
+// Bibliotecas propias
 #include "pcb.h"
 #include "queue.h"
+#include "gui.h"
 
 int main(void)
 {
@@ -20,7 +22,7 @@ int main(void)
   unsigned init_timer = 0;                         // Inicializador para timer, reduce la brecha entre MAX_TIME
   int minor_priority = 0;                          // Variable para saber que nodo extraer de ready para mandarlo a ejecución
 
-  // Se instancían las colas
+  // Se crean instancias de las colas
   Queue execution;
   Queue ready;
   Queue finished;
@@ -30,26 +32,30 @@ int main(void)
   initialize_queue(&ready);
   initialize_queue(&finished);
 
-  initscr();                                // Inicia la ventana
-  noecho();                                 // Evita la impresión automática de caracteres
-  keypad(stdscr, TRUE);                     // Habilita las teclas especiales
-  set_escdelay(10);                         // Proporciona el tiempo de expiración del ESC en milisegundos
-  processor_template();                     // Se imprime plantilla de la ventana del área del procesador
-  messages_template();                      // Se imprime plantilla de la ventana del área de mensajes
-  print_queues(execution, ready, finished); // Se imprimen las colas en su área
-  mvprintw(0, 2, "Artemisos>");             // Prompt fija donde se escriben los comandos
+  // Se crea instancia de la GUI
+  GUI gui;
+
+  initscr();                      // Inicia la ventana
+  start_color();                  // Permite el uso de colores
+  use_default_colors();           // Permite usar -1 como fondo transparente
+  noecho();                       // Evita la impresión automática de caracteres
+  set_escdelay(10);               // Proporciona el tiempo de expiración del ESC en milisegundos
+  initialize_gui(&gui);           // Inicializar GUI
+  keypad(gui.inner_prompt, TRUE); // Habilita las teclas especiales después de inicializar la GUI
+  empty_processor(gui.inner_cpu); // Se imprime el contenido del CPU inicialmente vacío
+  print_queues(gui.inner_queues, execution, ready, finished);
+  print_prompt(gui.inner_prompt, 0); // Se imprime prompt en fila 0
   do
   {
     if (!execution.head) // Si la cola Ejecución está vacía
     {
       // Gestor de comandos de terminal
-      exited = command_handling(buffers, &c, &index, &index_history,
+      exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                 &execution, &ready, &finished,
                                 &timer, &init_timer, &speed_level);
       if (ready.head) // Verifica si hay nodos en la cola Listos
       {
-        // enqueue(dequeue(&ready), &execution); // Se extrae el primer nodo y se pasa a Ejecución
-        //  Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
+        // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
         minor_priority = get_minor_priority(ready);
         enqueue(extract_by_priority(minor_priority, &ready), &execution);
         quantum = 0; // Se establece en 0 para el proceso que acaba de entrar
@@ -60,7 +66,7 @@ int main(void)
       if (timer <= MAX_TIME) // Permite escribir en la prompt antes de que se alcance el MAX_TIME
       {
         // Gestor de comandos de terminal
-        exited = command_handling(buffers, &c, &index, &index_history,
+        exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                   &execution, &ready, &finished,
                                   &timer, &init_timer, &speed_level);
       }
@@ -74,8 +80,6 @@ int main(void)
           fclose(execution.head->program);
           // Evita puntero colgante
           execution.head->program = NULL;
-          // Se limpia el área de mensaje
-          clear_messages();
           // Se verifica que no hay otro proceso del mismo usuario en Listos
           if (!search_uid(execution.head->UID, ready))
           {
@@ -92,19 +96,25 @@ int main(void)
           {
             W = 0.0; // No hay ningún usuario
           }
-          mvprintw(15, 4, "Terminación anormal del programa..");
-          // Se limpia el área de procesador
-          processor_template();
+          /* Se limpia área de mensajes con wclear para que redibuje todo
+             y no queden residuos de carácteres */
+          wclear(gui.inner_msg);
+          // Se imprime mensaje
+          mvwprintw(gui.inner_msg, 0, 0, "Terminación anormal del programa.");
+          // Se imprime procesador vacío
+          empty_processor(gui.inner_cpu);
+          // Se refresca la subventana de mensajes
+          wrefresh(gui.inner_msg);
         }
         else // Si hay más líneas por leer
         {
           // Línea sin salto de línea o retorno de carro
           line[strcspn(line, "\r\n")] = '\0';
           // Interpreta y ejecuta la instrucción
-          result_interpretation = interpret_instruction(line, execution.head);
+          result_interpretation = interpret_instruction(&gui, line, execution.head);
           if (result_interpretation != 0 && result_interpretation != -1) // Instrucción ejecutada correctamente
           {
-            // Si se leyó salto de línea, solo se incremente quantum
+            // Si se lee algo, se incrementa PC y quantum, de otro modo, solo quantum
             if (result_interpretation != 2)
             {
               (execution.head->PC)++; // Se incrementa PC
@@ -112,7 +122,7 @@ int main(void)
             // Se incrementa el número de instrucciones ejecutadas (quantum)
             quantum++;
             // Se actualizan la impresión de los registros del pcb en ejecución
-            print_registers(*execution.head);
+            print_processor(gui.inner_cpu, *execution.head);
             // Se actualizan los valores de uso de CPU para el proceso en ejecución (KCPU)
             execution.head->KCPU += IncCPU; // Saltos de 15
             /* Actualiza los contadores de uso del CPU para todos los procesos (no Terminados)
@@ -127,11 +137,11 @@ int main(void)
             execution.head->program = NULL;
             if (result_interpretation == -1) // Hubo un error
             {
-              mvprintw(15, 4, "Terminación anormal del programa.");
+              mvwprintw(gui.inner_msg, 1, 0, "Terminación anormal del programa.");
             }
             else // Hubo un END
             {
-              mvprintw(15, 4, "Programa finalizado correctamente.");
+              mvwprintw(gui.inner_msg, 0, 0, "Programa finalizado correctamente.");
             }
             // Se verifica que no hay otro proceso del mismo usuario en Listos
             if (!search_uid(execution.head->UID, ready))
@@ -149,8 +159,10 @@ int main(void)
             }
             // Se extrae nodo en ejecución y encola en Terminados
             enqueue(dequeue(&execution), &finished);
-            // Se limpia el área de procesador
-            processor_template();
+            // Se imprime procesador vacío
+            empty_processor(gui.inner_cpu);
+            // Se refresca la subventana de mensajes
+            wrefresh(gui.inner_msg);
           }
           if (quantum == MAXQUANTUM) // quantum llegó a MAXQUANTUM (4) y aún no se llega al fin del archivo
           {
@@ -159,7 +171,7 @@ int main(void)
               // Sacar el único nodo en Ejecución, e insertarlo al final de Listos
               enqueue((dequeue(&execution)), &ready);
               // Actualiza los parámetros de planificación, para todos los nodos de la cola Listos
-              update_parameters(&ready);      
+              update_parameters(&ready);
               // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad y se extrae
               minor_priority = get_minor_priority(ready);
               enqueue(extract_by_priority(minor_priority, &ready), &execution);
@@ -169,13 +181,13 @@ int main(void)
             quantum = 0;
           }
         }
-        timer = init_timer;                       // Se reinicia temporizador para volver a escribir en línea de comandos
-        general_info_area(execution);             // Se imprime información general
-        print_queues(execution, ready, finished); // Se imprimen las colas en su área
+        timer = init_timer;                                         // Se reinicia temporizador para volver a escribir en línea de comandos
+        print_ginfo(gui.inner_ginfo, execution);                    // Se imprime información general
+        print_queues(gui.inner_queues, execution, ready, finished); // Se imprimen las colas en su ventana
       }
     }
-    move(0, 12 + (index)); // Se coloca el cursor en su lugar
-    refresh();             // Refresca la ventana
+    wmove(gui.inner_prompt, 0, PROMPT_START + index); // Se coloca el cursor en su lugar
+    wrefresh(gui.inner_prompt);                       // Refresca las ventana de inner_prompt
   } while (!exited);
   endwin();     // Cierra la ventana
   printf("\n"); // Salto de línea en terminal

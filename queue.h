@@ -4,6 +4,7 @@
 // Declaración adelantada de tipo PCB 
 typedef struct pcb PCB;
 
+// Estructura de cola con cabecera
 typedef struct queue
 {
   PCB *head;             // Puntero a pcb, donde se ligan todos los nodos de la cola
@@ -16,7 +17,6 @@ PCB *create_pcb(int *pid, char *file_name, FILE **program, int iud);
 void enqueue(PCB *pcb, Queue *queue);
 PCB *dequeue(Queue *queue);
 void remove_pcb(PCB **pcb);
-void print_queues(Queue execution, Queue ready, Queue finished);
 PCB *extract_by_pid(int pid, Queue *queue);
 void kill_queue(Queue *queue);
 int search_uid(int uid, Queue queue);

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ncurses.h>
 #include <limits.h> // Para usar el int_max
+// Bibliotecas propias
 #include "queue.h"
 #include "pcb.h" // Se ocupa para la variable PBase
 
@@ -39,10 +40,7 @@ PCB *create_pcb(int *pid, char *file_name, FILE **program, int uid)
     // Actualizar el valor de la variable global W = 1/NumUs
     W = 1.0 / NumUs;
   }
-  else
-  {
-    mvprintw(14, 4, "Error: PCB no pudo ser creado.");
-  }
+  
   return pcb; // Se retorna el nodo creado
 }
 
@@ -97,42 +95,6 @@ void remove_pcb(PCB **pcb)
     free(*pcb);
     *pcb = NULL; // Evitar acceso a memoria liberada
   }
-}
-
-// Imprime las colas de procesos
-void print_queues(Queue execution, Queue ready, Queue finished)
-{
-  int row = 6;
-  int col = 86;
-  int i = 0;
-
-  // Se imprime la plantilla de las colas
-  mvprintw(row, col, "----------------------------------------EJECUCION--------------------------------------------          ");
-  for (row = 7, i = 0; execution.head != NULL; i++, row++)
-  {
-    mvprintw(row, col, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]      ",
-             execution.head->pid, execution.head->UID, execution.head->P, execution.head->KCPU, execution.head->KCPUxU, execution.head->file_name, 
-             execution.head->AX, execution.head->BX, execution.head->CX, execution.head->DX, execution.head->PC, execution.head->IR);
-    execution.head = execution.head->next;
-  }
-  mvprintw(row, col, "------------------------------------------LISTOS---------------------------------------------      ");
-  for (i = 0, row = row + 1; ready.head != NULL; i++, row++)
-  {
-    mvprintw(row, col, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]      ",
-             ready.head->pid, ready.head->UID, ready.head->P, ready.head->KCPU, ready.head->KCPUxU, ready.head->file_name, ready.head->AX, ready.head->BX,
-             ready.head->CX, ready.head->DX, ready.head->PC, ready.head->IR);
-    ready.head = ready.head->next;
-  }
-  mvprintw(row, col, "---------------------------------------TERMINADOS--------------------------------------------      ");
-  for (i = 0, row = row + 1; finished.head != NULL; i++, row++)
-  {
-    mvprintw(row, col, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]      ",
-             finished.head->pid, finished.head->UID, finished.head->P, finished.head->KCPU, finished.head->KCPUxU, finished.head->file_name, 
-             finished.head->AX, finished.head->BX, finished.head->CX, finished.head->DX, finished.head->PC, finished.head->IR);
-    finished.head = finished.head->next;
-  }
-  // Se actualiza la pantalla
-  refresh();
 }
 
 // Busca un PCB en la cola de acuerdo a su pid y lo extrae

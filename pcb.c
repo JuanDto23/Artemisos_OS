@@ -4,13 +4,14 @@
 #include <ncurses.h>
 #include <ctype.h>
 #include <math.h>
+// Bibliotecas propias
 #include "kbhit.h"
 #include "pcb.h"
 #include "queue.h"
+#include "gui.h"
 
 // Variables globales (menos pbase que se ocupa al crear el pcb)
 // Se ocupan para calcular la nueva prioridad y el uso del CPU del proceso y usuario
-
 int IncCPU = 60 / MAXQUANTUM;
 int NumUs = 0;
 double W = 0.0; // Después el peso es 1/NumUs
@@ -69,25 +70,6 @@ int is_numeric(char *str)
   return TRUE; // Si todos los caracteres son dígitos, regresar 1
 }
 
-// Limpia el prompt de la línea de comandos en la ventana
-void clear_prompt(int row)
-{
-  mvprintw(row, 2, "Artemisos>");
-  mvprintw(row, 12, "                                                                       ");
-}
-
-// Limpia el área de mensajes
-void clear_messages(void)
-{
-  mvprintw(14, 2, "-                                                                               -");
-  mvprintw(15, 2, "-                                                                               -");
-  mvprintw(16, 2, "-                                                                               -");
-  mvprintw(17, 2, "-                                                                               -");
-  mvprintw(18, 2, "-                                                                               -");
-  // Se actualiza la pantalla
-  refresh();
-}
-
 // Busca un registro en la cadena
 int search_register(char *p)
 {
@@ -118,20 +100,13 @@ int value_register(PCB *pcb, char r)
   return -1;
 }
 
-// Se imprime la cantidad de usuarios iniciados en sesión
-void general_info_area(Queue execution)
-{
-  mvprintw(0, 86, "----------------------------------- Usuarios:[%d] MinP:[%d] W:[%.2f] ----------------------------------", NumUs, execution.head->P, W);
-}
-
 // Pregunta si quiere salir del simulador
-int end_simulation(void)
+int end_simulation(WINDOW *inner_msg)
 {
   // Se imprime mensaje de confirmación
-  mvprintw(14, 4, "¿Seguro que quieres salir? [S/N]: ");
+  mvwprintw(inner_msg, 0, 0, "¿Seguro que quieres salir? [S/N]:");
   // Se obtiene la confirmación
-  char confirmation = toupper(getch());
-  addch(confirmation);
+  char confirmation = toupper(wgetch(inner_msg));
   if (confirmation == 'S')
   {
     return TRUE;
@@ -139,9 +114,24 @@ int end_simulation(void)
   return FALSE;
 }
 
+// Imprime el historial de comandos en la ventana
+void print_history(char buffers[NUMBER_BUFFERS][SIZE_BUFFER], WINDOW *inner_prompt)
+{
+  // Se imprimen los buffers de historial
+  for (int i = 1; i < NUMBER_BUFFERS; i++)
+  {
+    if (buffers[i][0] != 0) // Si el buffer no está vacío
+    {
+      clear_prompt(inner_prompt, i);
+      print_prompt(inner_prompt, i);
+      mvwprintw(inner_prompt, i, PROMPT_START, "%s", buffers[i]);
+    }
+  }
+}
+
 /*------------------------------FUNCIONES PRINCIPALES------------------------------*/
 // Manejo de comandos ingresados por el usuario en la línea de comandos
-int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
+int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished,
                      unsigned *timer, unsigned *init_timer, int *speed_level)
@@ -149,7 +139,8 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
   // Si se presionó una tecla en la terminal (kbhit)
   if (kbhit())
   {
-    *c = getch();    // Se obtiene la tecla presionada
+    // Se obtiene la tecla presionada en la subventana de prompt
+    *c = wgetch(gui->inner_prompt);
     if (*c == ENTER) // Si se presionó ENTER
     {
       // Indicador de que si salió del programa
@@ -157,7 +148,7 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
       // Se le coloca carácter nulo para finalizar la cadena prompt
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
-      exited = evaluate_command(buffers[0], execution, ready, finished);
+      exited = evaluate_command(gui, buffers[0], execution, ready, finished);
       // Se crea historial
       for (int i = NUMBER_BUFFERS - 1; i >= 0; i--)
       {
@@ -167,11 +158,11 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
       *index_history = 0;
       // Se limpia el buffer y la prompt
       initialize_buffer(buffers[0], index);
-      clear_prompt(0);
+      clear_prompt(gui->inner_prompt, 0);
       // Se imprimen los buffers de historial
-      print_history(buffers);
-      move(0, 12); // Se coloca el cursor en su lugar
-      if (exited)  // Significa que escribió el comando EXIT
+      print_history(buffers, gui->inner_prompt);
+      wmove(gui->inner_prompt, 0, PROMPT_START); // Se coloca el cursor en su lugar
+      if (exited)                                // Significa que escribió el comando EXIT
       {
         return 1; // Indica que salió del programa
       }
@@ -184,10 +175,9 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
         // Se decrementa el índice
         (*index)--;
         // Se sustituye el cáracter a eliminar por espacio en blanco
-        mvaddch(getcury(stdscr), getcurx(stdscr) - 1, ' ');
+        mvwaddch(gui->inner_prompt, getcury(gui->inner_prompt), getcurx(gui->inner_prompt) - 1, ' ');
         // Mueve el cursor hacia atrás
-        move(getcury(stdscr), getcurx(stdscr) - 1);
-        // delch(); // Elimina el carácter en la posición actual
+        wmove(gui->inner_prompt, getcury(gui->inner_prompt), getcurx(gui->inner_prompt) - 1);
       }
     }
     else if (*c == KEY_UP) // Avanza a buffers superiores
@@ -200,11 +190,11 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
         strcpy(buffers[0], buffers[*index_history - 1]);
         (*index_history)--;
         // Se limpia la prompt y se imprime el buffer prompt con el comando superior
-        clear_prompt(0);
-        mvprintw(0, 12, "%s", buffers[0]);
+        clear_prompt(gui->inner_prompt, 0);
+        mvwprintw(gui->inner_prompt, 0, 12, "%s", buffers[0]);
         // Se mueve el índice del buffer prompt para seguir escribiendo
         *index = strlen(buffers[0]);
-        move(0, 12 + *index);
+        wmove(gui->inner_prompt, 0, 12 + *index);
       }
     }
     else if (*c == KEY_DOWN) // Comando anterior (avanza a buffers inferiores)
@@ -217,11 +207,11 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
         strcpy(buffers[0], buffers[*index_history + 1]);
         (*index_history)++;
         // Se limpia la prompt y se imprime el buffer prompt con el comando anterior
-        clear_prompt(0);
-        mvprintw(0, 12, "%s", buffers[0]);
+        clear_prompt(gui->inner_prompt, 0);
+        mvwprintw(gui->inner_prompt, 0, 12, "%s", buffers[0]);
         // Se mueve el índice del buffer prompt para seguir escribiendo
         *index = strlen(buffers[0]);
-        move(0, 12 + *index);
+        wmove(gui->inner_prompt, 0, 12 + *index);
       }
     }
     else if (*c == KEY_RIGHT) // Aumenta la velocidad de escritura
@@ -232,7 +222,7 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
         (*speed_level)++;                                        // Se incrementa el nivel de velocidad
       }
       // Se imprime el nivel de velocidad
-      mvprintw(20, 2, "Nivel velocidad: %d  ", *speed_level);
+      // mvprintw(20, 2, "Nivel velocidad: %d  ", *speed_level);
       // mvprintw(21, 2, "init_timer: %d     ", *init_timer);
     }
     else if (*c == KEY_LEFT) // Disminuye la velocidad de escritura
@@ -243,24 +233,27 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
         (*speed_level)--;                                            // Se decrementa el nivel de velocidad
       }
       // Se imprime el nivel de velocidad
-      mvprintw(20, 2, "Nivel velocidad: %d  ", *speed_level);
+      // mvprintw(20, 2, "Nivel velocidad: %d  ", *speed_level);
       // mvprintw(21, 2, "init_timer: %d     ", *init_timer);
     }
     else if (*c == ESC) // Acceso rápido para salir del programa con ESC
     {
-      // Se limpia área de mensajes
-      clear_messages();
+      /* Se limpia área de mensajes con wclear para que redibuje todo
+         y no queden residuos de carácteres */
+      wclear(gui->inner_msg);
       // Se confirma si quiere salir del programa
-      if (end_simulation())
+      if (end_simulation(gui->inner_msg))
       {
         // Se liberan todas las colas
         free_queues(execution, ready, finished);
         return 1; // Indica que salió del programa
       }
       // Se limpia área de mensajes
-      clear_messages();
+      werase(gui->inner_msg);
       // Se coloca el cursor en su lugar
-      move(0, 12);
+      wmove(gui->inner_prompt, 0, 12);
+      // Se refresca la subventana de mensajes
+      wrefresh(gui->inner_msg);
     }
     else // Si se presionó cualquier otra tecla
     {
@@ -268,7 +261,7 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
       {
         // Concatena la tecla presionada al buffer para su posterior impresión
         buffers[0][(*index)++] = *c;
-        mvaddch(0, 11 + (*index), *c);
+        mvwaddch(gui->inner_prompt, 0, (PROMPT_START - 1) + (*index), *c);
       }
     }
   }
@@ -277,7 +270,7 @@ int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
 }
 
 // Evalúa los comandos ingresados por el usuario
-int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finished)
+int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished)
 {
   /* TOKENS */
   char command[256] = {0};
@@ -293,26 +286,28 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
   // Se convierte el comando a mayúsculas
   str_upper(command);
 
-  clear_messages(); // Se limpia el área de mensajes
-
-  // mvprintw(30, 5, "%s", parameter2);
+  // Se limpia el área de mensajes
+  werase(gui->inner_msg);
 
   // Se verifica si el comando es EXIT y no tiene parámetros
   if (!(strcmp(command, "EXIT")) && !parameter1[0])
   {
-    // Se limpia área de mensajes
-    clear_messages();
+    /* Se limpia área de mensajes con wclear para que redibuje todo
+       y no queden residuos de carácteres */
+    wclear(gui->inner_msg);
     // Se confirma si quiere salir del programa
-    if (end_simulation())
+    if (end_simulation(gui->inner_msg))
     {
       // Se liberan todas las colas
       free_queues(execution, ready, finished);
       return 1; // Indica que salió del programa
     }
     // Se limpia área de mensajes
-    clear_messages();
+    werase(gui->inner_msg);
     // Se coloca el cursor en su lugar
-    move(0, 12);
+    wmove(gui->inner_prompt, 0, 12);
+    // Se refresca la subventana de mensajes
+    wrefresh(gui->inner_msg);
   }
   else if (!strcmp(command, "LOAD")) // Si el comando es LOAD
   {
@@ -336,28 +331,31 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           }
           // Inserta el nodo en la cola Listos
           enqueue(create_pcb(&ready->pid, parameter1, &file, value_par2), ready);
+          // Mensaje de proceso creado correctamente
+          mvwprintw(gui->inner_msg, 0, 0, "Proceso %d [%s] creado correctamente.", ready->pid, parameter1);
+          // Incremento de pid para el siguiente proceso a crear
           (ready->pid)++;
         }
         else // Si el archivo no existe
         {
-          mvprintw(14, 4, "Error: archivo %s no existe.", parameter1);
+          mvwprintw(gui->inner_msg, 0, 0, "Error: archivo %s no existe.", parameter1);
         }
       }
       // No metió un id de usuario
       else if (parameter2[0] == '\0')
       {
-        mvprintw(14, 4, "Error: Debes ingresar un id de usuario");
+        mvwprintw(gui->inner_msg, 0, 0, "Error: debes ingresar un id de usuario.");
       }
       // Metió otra cosa que no es un entero
       else
       {
-        mvprintw(14, 4, "Error: Id de usuario incorrecto");
+        mvwprintw(gui->inner_msg, 0, 0, "Error: id de usuario debe ser un entero.");
       }
     }
     else // Si no se especificó un archivo
     {
-      mvprintw(14, 4, "Error: faltan parámetros.");
-      mvprintw(15, 4, "Sintaxis: LOAD «archivo»");
+      mvwprintw(gui->inner_msg, 0, 0, "Error: faltan parámetros.");
+      mvwprintw(gui->inner_msg, 1, 0, "Sintaxis: LOAD «archivo» «uid».");
     }
   }
   else if (!strcmp(command, "KILL")) // Si el comando es KILL
@@ -370,7 +368,7 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
         pid_to_search = atoi(parameter1);
         // Se busca y extrae el pcb solicitado en Ejecución
         PCB *pcb_extracted = extract_by_pid(pid_to_search, execution); // Hay 2 opciones, que el pcb a matar este en ejecución o en ready, comenzamos con ejecución
-        if (pcb_extracted)                                         // El pcb se encontró en la cola de Ejecución
+        if (pcb_extracted)                                             // El pcb se encontró en la cola de Ejecución
         {
           // Es necesario cerrar el archivo antes de pasar a la cola de Ejecución
           fclose(pcb_extracted->program);
@@ -384,8 +382,8 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           // Se encola el pcb en Terminados
           enqueue(pcb_extracted, finished);
           // Se limpia el área procesador y se imprime mensaje de terminación
-          processor_template();
-          mvprintw(14, 4, "El pcb con pid [%d] ha sido terminado", pid_to_search);
+          // processor_template();
+          mvwprintw(gui->inner_msg, 0, 0, "El pcb con pid [%d] ha sido terminado.", pid_to_search);
           // Se actualiza el valor de W
           if (NumUs)
           {
@@ -409,7 +407,7 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
           // Se encola el pcb en Terminados
           enqueue(pcb_extracted, finished);
           // Se imprime mensaje de terminación
-          mvprintw(14, 4, "El pcb con pid [%d] ha sido terminado", pid_to_search);
+          mvwprintw(gui->inner_msg, 0, 0, "El pcb con pid [%d] ha sido terminado.", pid_to_search);
           // Se actualiza el valor de W
           if (NumUs)
           {
@@ -422,24 +420,26 @@ int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finish
         }
         else // El pcb no se encontró en ninguna cola
         {
-          mvprintw(14, 4, "Error: no se pudo encontrar el pcb con pid [%d].", pid_to_search); // No se encontro el índice
+          mvwprintw(gui->inner_msg, 0, 0, "Error: no se pudo encontrar el pcb con pid [%d].", pid_to_search); // No se encontro el índice
         }
       }
       else // Si el parámetro no es numérico
       {
-        mvprintw(14, 4, "Error: parámetro incorrecto \"%s\".", parameter1); // El parámetro no es un número
+        mvwprintw(gui->inner_msg, 0, 0, "Error: parámetro incorrecto \"%s\".", parameter1); // El parámetro no es un número
       }
     }
     else // Si no se especificó un pid
     {
-      mvprintw(14, 4, "Error: faltan parámetros.");
-      mvprintw(15, 4, "Sintaxis: KILL «índice»");
+      mvwprintw(gui->inner_msg, 0, 0, "Error: faltan parámetros.");
+      mvwprintw(gui->inner_msg, 1, 0, "Sintaxis: KILL «índice»");
     }
   }
   else // Si el comando no es EXIT
   {
-    mvprintw(14, 4, "Error: comando \"%s\" no encontrado.", command); // Comando no encontrado
+    mvwprintw(gui->inner_msg, 0, 0, "Error: comando \"%s\" no encontrado.", command); // Comando no encontrado
   }
+  // Refrescar subventana d mensajes
+  wrefresh(gui->inner_msg);
   return 0; // Indica que no salió del programa
 }
 
@@ -459,7 +459,7 @@ int read_line(FILE **f, char *line)
 }
 
 // Interpreta y ejecuta la instrucción leída de una línea del archivo de programa de un pcb
-int interpret_instruction(char *line, PCB *pcb)
+int interpret_instruction(GUI *gui, char *line, PCB *pcb)
 {
   /* TOKENS */
   char instruction[32] = {0}; // Instrucción leída de línea
@@ -485,8 +485,10 @@ int interpret_instruction(char *line, PCB *pcb)
   //  Se comprueba si la instrucción es END
   if (!strcmp(instruction, "END"))
   {
-    clear_messages(); // Se limpia el área de mensajes
-    return 0;         // La instrucción leída es END
+    /* Se limpia área de mensajes con wclear para que redibuje todo
+       y no queden residuos de carácteres */
+    wclear(gui->inner_msg);
+    return 0; // La instrucción leída es END
   }
 
   // Se comprueba si el segundo parámetro existe y es un número
@@ -498,8 +500,10 @@ int interpret_instruction(char *line, PCB *pcb)
   int reg1 = search_register(p1);
   if (reg1 == -1)
   {
-    clear_messages(); // Se limpia el área de mensajes
-    mvprintw(14, 4, "Error: registro inválido \"%s\"", p1);
+    /* Se limpia área de mensajes con wclear para que redibuje todo
+       y no queden residuos de carácteres */
+    wclear(gui->inner_msg);
+    mvwprintw(gui->inner_msg, 0, 0, "Error: registro inválido \"%s\".", p1);
     return -1; // El primer parámetro es un registro inválido
   }
 
@@ -523,8 +527,10 @@ int interpret_instruction(char *line, PCB *pcb)
       number_p2 = value_register(pcb, 'D');
       break;
     default:
-      clear_messages(); // Se limpia el área de mensajes
-      mvprintw(14, 4, "Error: registro inválido \"%s\"", p2);
+      /* Se limpia área de mensajes con wclear para que redibuje todo
+         y no queden residuos de carácteres */
+      wclear(gui->inner_msg);
+      mvwprintw(gui->inner_msg, 0, 0, "Error: registro inválido \"%s\".", p2);
       return -1; // El segundo parámetro es un registro inválido
       break;
     }
@@ -591,19 +597,23 @@ int interpret_instruction(char *line, PCB *pcb)
       }
       else
       {
-        clear_messages(); // Se limpia el área de mensajes
-        mvprintw(14, 4, "Error: División por 0 inválida");
+        /* Se limpia área de mensajes con wclear para que redibuje todo
+           y no queden residuos de carácteres */
+        wclear(gui->inner_msg);
+        mvwprintw(gui->inner_msg, 0, 0, "Error: división por 0 inválida.");
         return -1; // Instrucción no encontrada
       }
     }
     else // Si la instrucción no es MOV, ADD, SUB, MUL, DIV
     {
-      clear_messages(); // Se limpia el área de mensajes
+      /* Se limpia área de mensajes con wclear para que redibuje todo
+         y no queden residuos de carácteres */
+      wclear(gui->inner_msg);
       // Si la instrucción es INC o DEC, se indica que hay exceso de parámetros
       if (!strcmp(instruction, "INC") || !strcmp(instruction, "DEC"))
-        mvprintw(14, 4, "Error: instrucción \"%s\" execeso de parámetros", instruction);
+        mvwprintw(gui->inner_msg, 0, 0, "Error: instrucción \"%s\" execeso de parámetros.", instruction);
       else // Si no, se indica que la instrucción no fue encontrada
-        mvprintw(14, 4, "Error: instrucción inválida \"%s\"", instruction);
+        mvwprintw(gui->inner_msg, 0, 0, "Error: instrucción inválida \"%s\".", instruction);
       return -1; // Sintaxis de instrucción incorrecta
     }
   }
@@ -633,7 +643,9 @@ int interpret_instruction(char *line, PCB *pcb)
     }
     else // Si la instrucción no es INC o DEC
     {
-      clear_messages(); // Se limpia el área de mensajes
+      /* Se limpia área de mensajes con wclear para que redibuje todo
+         y no queden residuos de carácteres */
+      wclear(gui->inner_msg);
       // Si la instrucción es MOV, ADD, SUB, MUL, DIV, se indica que faltan parámetros
       if (!strcmp(instruction, "MOV") ||
           !strcmp(instruction, "ADD") ||
@@ -641,66 +653,14 @@ int interpret_instruction(char *line, PCB *pcb)
           !strcmp(instruction, "MUL") ||
           !strcmp(instruction, "DIV"))
       {
-        mvprintw(14, 4, "Error: instrucción \"%s\" faltan parámetros", instruction);
+        mvwprintw(gui->inner_msg, 0, 0, "Error: instrucción \"%s\" faltan parámetros.", instruction);
       }
       else // Si no, se indica que la instrucción no fue encontrada
-        mvprintw(14, 4, "Error: instrucción inválida \"%s\"", instruction);
+        mvwprintw(gui->inner_msg, 0, 0, "Error: instrucción inválida \"%s\".", instruction);
       return -1; // Sintaxis de instrucción incorrecta
     }
   }
+  // Refrescar subventana de mensajes
+  wrefresh(gui->inner_msg);
   return 1; // Instrucción ejecutada correctamente
-}
-
-// Plantilla de la ventana de procesador
-void processor_template(void)
-{
-  mvprintw(6, 2, "----------------------------------PROCESADOR-------------------------------------");
-  mvprintw(7, 2, "- AX:                                PC:                                        -");
-  mvprintw(8, 2, "- BX:                                IR:                                        -");
-  mvprintw(9, 2, "- CX:                                PID:                                       -");
-  mvprintw(10, 2, "- DX:                                NAME:                                      -");
-  mvprintw(11, 2, "-                                    SIG:                                       -");
-  mvprintw(12, 2, "---------------------------------------------------------------------------------");
-  refresh();
-}
-
-// Plantilla de la ventana de mensajes
-void messages_template(void)
-{
-  mvprintw(13, 2, "-----------------------------------MENSAJES--------------------------------------");
-  mvprintw(14, 2, "-                                                                               -");
-  mvprintw(15, 2, "-                                                                               -");
-  mvprintw(16, 2, "-                                                                               -");
-  mvprintw(17, 2, "-                                                                               -");
-  mvprintw(18, 2, "-                                                                               -");
-  mvprintw(19, 2, "---------------------------------------------------------------------------------");
-  refresh();
-}
-
-// Imprime el historial de comandos en la ventana
-void print_history(char buffers[NUMBER_BUFFERS][SIZE_BUFFER])
-{
-  // Se imprimen los buffers de historial
-  for (int i = 1; i < NUMBER_BUFFERS; i++)
-  {
-    if (buffers[i][0] != 0) // Si el buffer no está vacío
-    {
-      clear_prompt(i);
-      mvprintw(i, 2, "Artemisos>%s", buffers[i]);
-    }
-  }
-}
-
-// Imprime los registros del pcb en ejecución en la ventana de procesador
-void print_registers(PCB pcb)
-{
-  mvprintw(7, 7, "[%ld]      ", pcb.AX);
-  mvprintw(7, 42, "[%u]      ", pcb.PC);
-  mvprintw(8, 7, "[%ld]       ", pcb.BX);
-  mvprintw(8, 42, "[%s]            ", pcb.IR);
-  mvprintw(9, 7, "[%ld]      ", pcb.CX);
-  mvprintw(9, 43, "[%u]      ", pcb.pid);
-  mvprintw(10, 7, "[%ld]      ", pcb.DX);
-  mvprintw(10, 44, "[%s]      ", pcb.file_name);
-  mvprintw(11, 43, "[%p]      ", pcb.next);
 }

@@ -1,8 +1,9 @@
 #ifndef _PCB_H
 #define _PCB_H
 
-// Declaración adelantada de Queue
+// Declaración adelantada de Queue y GUI
 typedef struct queue Queue;
+typedef struct gui GUI;
 
 // Valores numéricos obtenidos de kbwhat.c
 #define ENTER 10
@@ -10,9 +11,10 @@ typedef struct queue Queue;
 #define ESC 27
 
 // Número de buffers, tamaño de buffer y tamaño de línea
-#define NUMBER_BUFFERS 5
-#define SIZE_BUFFER 71
-#define SIZE_LINE 32
+#define NUMBER_BUFFERS 3
+#define SIZE_BUFFER 66
+#define SIZE_LINE 34
+#define PROMPT_START 12
 
 // Valores booleanos
 #define TRUE 1
@@ -49,10 +51,7 @@ typedef struct pcb
   int KCPUxU; // Uso de CPU por usuario
 } PCB;
 
-// Se declara variable externa para poderla consultar en todos los archivos en incluyan al header
-// Las puse todas aquí, solo se importan en donde se ocupen. Abajo porque ocupaban MAXQUANTUM
-// SOLO SE DECLARAN, SE INICIALIZAN DONDE COMIENZAN A USARSE, le adelantas al compilador que después por ahí habrá una variable llamada así
-// ESto no reserva memoria, hasta que se inicializan. Solo se debe hacer una vez.
+// Se declaran las variables usadas en pcb.c, pero no se reserva memoria
 extern int NumUs;
 extern int IncCPU;
 extern int NumUs;
@@ -67,26 +66,21 @@ void initialize_buffer(char *buffer, int *index);
 // FUNCIONES AUXILIARES
 void str_upper(char *str);
 int is_numeric(char *str);
-void clear_prompt(int row);
-void clear_messages(void);
 int search_register(char *p);
 int value_register(PCB *pcb, char r);
-void general_info_area(Queue execution);
-int end_simulation(void);
+int end_simulation(WINDOW *inner_msg);
+void print_history(char buffers[NUMBER_BUFFERS][SIZE_BUFFER], WINDOW *inner_prompt);
 
 // FUNCIONES PRINCIPALES
-int command_handling(char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
+int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished,
                      unsigned *timer, unsigned *init_timer, int *speed_level);
 
-int evaluate_command(char *buffer, Queue *execution, Queue *ready, Queue *finished);
+int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished);
 
 int read_line(FILE **program, char *line);
-int interpret_instruction(char *line, PCB *pcb);
-void processor_template(void);
-void messages_template(void);
-void print_history(char buffers[NUMBER_BUFFERS][SIZE_BUFFER]);
-void print_registers(PCB pcb);
+int interpret_instruction(GUI *gui, char *line, PCB *pcb);
+
 
 #endif  
