@@ -251,7 +251,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
       // Se limpia área de mensajes
       werase(gui->inner_msg);
       // Se coloca el cursor en su lugar
-      wmove(gui->inner_prompt, 0, 12);
+      wmove(gui->inner_prompt, 0, PROMPT_START);
       // Se refresca la subventana de mensajes
       wrefresh(gui->inner_msg);
     }
@@ -387,7 +387,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           // Se actualiza el valor de W
           if (NumUs)
           {
-            W = 1 / NumUs;
+            W = 1.0 / NumUs;
           }
           else
           {
@@ -411,7 +411,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           // Se actualiza el valor de W
           if (NumUs)
           {
-            W = 1 / NumUs;
+            W = 1.0 / NumUs;
           }
           else
           {

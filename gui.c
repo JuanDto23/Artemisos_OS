@@ -31,7 +31,7 @@ void initialize_gui(GUI *gui)
   box(gui->queues, 0, 0);
   box(gui->ginfo, 0, 0);
 
-  // Escribir títulos en las cajas de CPU y Mensajes
+  // Escribir títulos en las cajas de PROMPT, CPU, Mensajes e Información General
   // Línea 0 es el borde superior
   mvwprintw(gui->prompt, 0, (WIDTH_PROMPT - strlen("PROMPT")) / 2, "%s", "PROMPT");
   mvwprintw(gui->cpu, 0, (WIDTH_CPU - strlen("PROCESADOR")) / 2, "%s", "PROCESADOR");
@@ -60,16 +60,16 @@ void print_prompt(WINDOW *inner_prompt, int row)
   wattroff(inner_prompt, COLOR_PAIR(1) | A_BOLD);
 
   wattron(inner_prompt, COLOR_PAIR(2) | A_BOLD);
-  mvwprintw(inner_prompt, row, 9, ":"),
-      wattroff(inner_prompt, COLOR_PAIR(2) | A_BOLD);
+  mvwprintw(inner_prompt, row, 9, ":");
+  wattroff(inner_prompt, COLOR_PAIR(2) | A_BOLD);
 
   wattron(inner_prompt, COLOR_PAIR(3) | A_BOLD);
-  mvwprintw(inner_prompt, row, 10, "~"),
-      wattroff(inner_prompt, COLOR_PAIR(3) | A_BOLD);
+  mvwprintw(inner_prompt, row, 10, "~");
+  wattroff(inner_prompt, COLOR_PAIR(3) | A_BOLD);
 
   wattron(inner_prompt, COLOR_PAIR(2) | A_BOLD);
-  mvwprintw(inner_prompt, row, 11, "$"),
-      wattroff(inner_prompt, COLOR_PAIR(2) | A_BOLD);
+  mvwprintw(inner_prompt, row, 11, "$");
+  wattroff(inner_prompt, COLOR_PAIR(2) | A_BOLD);
 }
 
 // Imprime los parámetros del proceso que se encuentre en ejecución
