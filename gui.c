@@ -156,8 +156,17 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue fini
 // Imprime información general
 void print_ginfo(WINDOW *inner_ginfo, Queue execution)
 {
+  // Se limpia la subventana de Información General
+  werase(inner_ginfo);
+
   mvwprintw(inner_ginfo, 0, (WIDTH_GINFO / 3) - 25, "Usuarios:[%d]", NumUs);
-  mvwprintw(inner_ginfo, 0, ((2 * WIDTH_GINFO) / 3) - 25, "MinP:[%d]", execution.head->P);
+  // Se valida que haya algo en ejecución
+  if (execution.head) {
+    mvwprintw(inner_ginfo, 0, ((2 * WIDTH_GINFO) / 3) - 25, "MinP:[%d]", execution.head->P);
+  }
+  else {
+    mvwprintw(inner_ginfo, 0, ((2 * WIDTH_GINFO) / 3) - 25, "MinP:[%d]", 0);
+  }
   mvwprintw(inner_ginfo, 0, WIDTH_GINFO - 25, "W:[%.2f]", W);
   // Se refresca la subventana de Información General
   wrefresh(inner_ginfo);
