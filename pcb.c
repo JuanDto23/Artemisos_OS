@@ -194,7 +194,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
         mvwprintw(gui->inner_prompt, 0, 12, "%s", buffers[0]);
         // Se mueve el índice del buffer prompt para seguir escribiendo
         *index = strlen(buffers[0]);
-        wmove(gui->inner_prompt, 0, 12 + *index);
+        wmove(gui->inner_prompt, 0, PROMPT_START + *index);
       }
     }
     else if (*c == KEY_DOWN) // Comando anterior (avanza a buffers inferiores)
@@ -211,7 +211,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
         mvwprintw(gui->inner_prompt, 0, 12, "%s", buffers[0]);
         // Se mueve el índice del buffer prompt para seguir escribiendo
         *index = strlen(buffers[0]);
-        wmove(gui->inner_prompt, 0, 12 + *index);
+        wmove(gui->inner_prompt, 0, PROMPT_START + *index);
       }
     }
     else if (*c == KEY_RIGHT) // Aumenta la velocidad de escritura
@@ -305,7 +305,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
     // Se limpia área de mensajes
     werase(gui->inner_msg);
     // Se coloca el cursor en su lugar
-    wmove(gui->inner_prompt, 0, 12);
+    wmove(gui->inner_prompt, 0, PROMPT_START);
     // Se refresca la subventana de mensajes
     wrefresh(gui->inner_msg);
   }
