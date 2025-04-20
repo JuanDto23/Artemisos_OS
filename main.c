@@ -125,6 +125,9 @@ int main(void)
             print_processor(gui.inner_cpu, *execution.head);
             // Se actualizan los valores de uso de CPU para el proceso en ejecución (KCPU)
             execution.head->KCPU += IncCPU; // Saltos de 15
+            // También incrementa el uso de procesador por usuario al proceso en ejecución, para darle paso a otro que no se haya ejecutado todavia
+            // Se quiere que todos los procesos del mismo usuario se vayan intercalando, no que se ejecuten secuencialemente (de a ratitos cada uno)
+            execution.head->KCPUxU += IncCPU;
             /* Actualiza los contadores de uso del CPU para todos los procesos (no Terminados)
               del usuario dueño del proceso en ejecución */
             update_KCPUxU_per_process(execution.head->UID, &ready);
