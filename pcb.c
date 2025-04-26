@@ -379,11 +379,6 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           {
             NumUs--;
           }
-          // Se encola el pcb en Terminados
-          enqueue(pcb_extracted, finished);
-          // Se limpia el área procesador y se imprime mensaje de terminación
-          // processor_template();
-          mvwprintw(gui->inner_msg, 0, 0, "El pcb con pid [%d] ha sido terminado.", pid_to_search);
           // Se actualiza el valor de W
           if (NumUs)
           {
@@ -392,6 +387,18 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           else
           {
             W = 0.0; // No hay ningún usuario
+          }
+          // Se encola el pcb en Terminados
+          enqueue(pcb_extracted, finished);
+          // Se imprime procesador vacío y se muestra mensaje
+          empty_processor(gui->inner_cpu);
+          mvwprintw(gui->inner_msg, 0, 0, "El pcb con pid [%d] ha sido terminado.", pid_to_search);
+          
+          /* Si solo había un proceso en Ejecución y nada en Listos,
+             se debe de refrescar la impresión de las colas para que
+             se vea que el proceso está en la cola Finalizados */
+          if (!ready->head) {
+            print_queues(gui->inner_queues, *execution, *ready, *finished);
           }
         }
         else if ((pcb_extracted = extract_by_pid(pid_to_search, ready))) // El pcb se encontró en la cola de Listos
@@ -400,14 +407,11 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           fclose(pcb_extracted->program);
           // Evita puntero colgante
           pcb_extracted->program = NULL;
+          // Se verifica si todavía hay procesos del mismo usuario
           if (!search_uid(pcb_extracted->UID, *ready) && !search_uid(pcb_extracted->UID, *execution))
           {
             NumUs--;
           }
-          // Se encola el pcb en Terminados
-          enqueue(pcb_extracted, finished);
-          // Se imprime mensaje de terminación
-          mvwprintw(gui->inner_msg, 0, 0, "El pcb con pid [%d] ha sido terminado.", pid_to_search);
           // Se actualiza el valor de W
           if (NumUs)
           {
@@ -417,6 +421,10 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           {
             W = 0.0; // No hay ningún usuario
           }
+          // Se encola el pcb en Terminados
+          enqueue(pcb_extracted, finished);
+          // Se imprime mensaje de terminación
+          mvwprintw(gui->inner_msg, 0, 0, "El pcb con pid [%d] ha sido terminado.", pid_to_search);
         }
         else // El pcb no se encontró en ninguna cola
         {

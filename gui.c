@@ -52,24 +52,23 @@ void print_prompt(WINDOW *inner_prompt, int row)
 {
   // Solo color de texto con fondo transparente
   init_pair(1, COLOR_GREEN, -1);
-  init_pair(2, COLOR_WHITE, -1);
-  init_pair(3, COLOR_BLUE, -1);
+  init_pair(2, COLOR_BLUE, -1);
 
+  // Color verde
   wattron(inner_prompt, COLOR_PAIR(1) | A_BOLD);
   mvwprintw(inner_prompt, row, 0, "artemisos");
   wattroff(inner_prompt, COLOR_PAIR(1) | A_BOLD);
 
-  wattron(inner_prompt, COLOR_PAIR(2) | A_BOLD);
+  // Color del sistema
   mvwprintw(inner_prompt, row, 9, ":");
-  wattroff(inner_prompt, COLOR_PAIR(2) | A_BOLD);
 
-  wattron(inner_prompt, COLOR_PAIR(3) | A_BOLD);
-  mvwprintw(inner_prompt, row, 10, "~");
-  wattroff(inner_prompt, COLOR_PAIR(3) | A_BOLD);
-
+  // Color azul
   wattron(inner_prompt, COLOR_PAIR(2) | A_BOLD);
-  mvwprintw(inner_prompt, row, 11, "$");
+  mvwprintw(inner_prompt, row, 10, "~");
   wattroff(inner_prompt, COLOR_PAIR(2) | A_BOLD);
+
+  // Color del sistema
+  mvwprintw(inner_prompt, row, 11, "$");
 }
 
 // Imprime los parámetros del proceso que se encuentre en ejecución
