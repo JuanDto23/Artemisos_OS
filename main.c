@@ -175,6 +175,9 @@ int main(void)
               enqueue((dequeue(&execution)), &ready);
               // Actualiza los parámetros de planificación, para todos los nodos de la cola Listos
               update_parameters(&ready);
+              // Mostrar el proceso extraído de Ejecución por 3 segundos
+              print_queues(gui.inner_queues, execution, ready, finished);
+              sleep(3);
               // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad y se extrae
               minor_priority = get_minor_priority(ready);
               enqueue(extract_by_priority(minor_priority, &ready), &execution);

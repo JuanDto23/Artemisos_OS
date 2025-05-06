@@ -323,14 +323,25 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
         {
           /*
             Se verifica si el usuario es nuevo o no (tiene algún proceso en Ejecución o Listos).
-            Si no tienen ninguno, se incrementa el NumUs
+            Si no tienen ninguno, se incrementa el NumUs, si es el caso, el KCPUxu se inicia en cero
           */
+          PCB *new_pcb = create_pcb(&ready->pid, parameter1, &file, value_par2);
           if (!search_uid(value_par2, *execution) && !search_uid(value_par2, *ready))
           {
-            NumUs++;
+            NumUs++; 
+          } 
+          else { // El usuario ya tiene procesos, se actualiza KCPUxU en común al usuario
+            int KCPUxU;
+            // Se verifica si hay algún proceso en Listos para actualizar KCPUxU
+            if((KCPUxU = get_KCPUxU(new_pcb->UID, *ready)) != -1){
+              new_pcb->KCPUxU = KCPUxU;
+            }
+            else { // Si no hay un proceso del usuario en Listos, seguramente está en Ejecución
+              new_pcb->KCPUxU = execution->head->KCPUxU;
+            }
           }
           // Inserta el nodo en la cola Listos
-          enqueue(create_pcb(&ready->pid, parameter1, &file, value_par2), ready);
+          enqueue(new_pcb, ready);
           // Mensaje de proceso creado correctamente
           mvwprintw(gui->inner_msg, 0, 0, "Proceso %d [%s] creado correctamente.", ready->pid, parameter1);
           // Incremento de pid para el siguiente proceso a crear

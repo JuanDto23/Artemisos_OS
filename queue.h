@@ -25,4 +25,5 @@ int get_minor_priority(Queue queue);
 PCB *extract_by_priority(int priority, Queue * queue);
 void update_KCPUxU_per_process(int uid, Queue *queue);
 void update_parameters(Queue *queue);
+int get_KCPUxU(int uid, Queue queue);
 #endif

@@ -54,7 +54,6 @@ typedef struct pcb
 // Se declaran las variables usadas en pcb.c, pero no se reserva memoria
 extern int NumUs;
 extern int IncCPU;
-extern int NumUs;
 extern double W;
 extern const int PBase;
 

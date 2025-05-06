@@ -295,3 +295,27 @@ void update_parameters(Queue *queue)
     current = current->next; // Se avanza al siguiente nodo
   }
 }
+
+//
+int get_KCPUxU(int uid, Queue queue)
+{
+  PCB *current = NULL;
+  int found = FALSE;
+
+  current = queue.head;
+  while (current && !found)
+  {
+    // Se comprueba que el id usuario coincida con el dueño del nodo actual
+    found = (current->UID == uid);
+    if (!found)
+    {
+      // Se avanza al siguiente nodo de la lista
+      current = current->next;
+    }
+  }
+  if (current)
+  {
+    return current->KCPUxU; // Se encontró el usuario en la cola
+  }
+  return -1; // La cola está vacía o no se encontró el usuario
+}
