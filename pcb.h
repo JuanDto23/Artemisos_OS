@@ -31,6 +31,12 @@ typedef struct gui GUI;
    podrán ejecutar por cada proceso */
 #define MAXQUANTUM 4
 
+#define MAX_PAGES 4096
+#define PAGE_SIZE 16
+#define FILENAME "SWAP"
+#define INSTRUCTION_SIZE 32 
+#define TOTAL_INSTRUCTIONS 65536
+
 // Creación del bloque de control de procesos
 typedef struct pcb
 {
@@ -49,6 +55,7 @@ typedef struct pcb
   int P;      // Prioridad
   int KCPU;   // Uso de CPU por proceso
   int KCPUxU; // Uso de CPU por usuario
+  int TmpSize; // Marcos ocupados por el programa en el SWAP
 } PCB;
 
 // Se declaran las variables usadas en pcb.c, pero no se reserva memoria
@@ -69,6 +76,7 @@ int search_register(char *p);
 int value_register(PCB *pcb, char r);
 int end_simulation(WINDOW *inner_msg);
 void print_history(char buffers[NUMBER_BUFFERS][SIZE_BUFFER], WINDOW *inner_prompt);
+int count_lines(FILE *file);
 
 // FUNCIONES PRINCIPALES
 int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][SIZE_BUFFER],

@@ -16,7 +16,7 @@ void initialize_queue(Queue *queue)
 }
 
 // Crea un PCB y lo retorna
-PCB *create_pcb(int *pid, char *file_name, FILE **program, int uid)
+PCB *create_pcb(int *pid, char *file_name, FILE **program, int uid, int TmpSize)
 {
   PCB *pcb = NULL; // Nodo a retornar
 
@@ -39,6 +39,7 @@ PCB *create_pcb(int *pid, char *file_name, FILE **program, int uid)
     pcb->KCPUxU = 0;
     // Actualizar el valor de la variable global W = 1/NumUs
     W = 1.0 / NumUs;
+    pcb -> TmpSize = TmpSize;
   }
   
   return pcb; // Se retorna el nodo creado
@@ -318,4 +319,27 @@ int get_KCPUxU(int uid, Queue queue)
     return current->KCPUxU; // Se encontró el usuario en la cola
   }
   return -1; // La cola está vacía o no se encontró el usuario
+}
+
+int search_file(char *file_name, Queue queue)
+{
+  PCB *current = NULL;
+  int found = FALSE;
+
+  current = queue.head;
+  while (current && !found)
+  {
+    // Se comprueba que el archivo coincida con el archivo del nodo actual
+    found = !(strcmp(current->file_name, file_name));
+    if (!found)
+    {
+      // Se avanza al siguiente nodo de la lista
+      current = current->next;
+    }
+  }
+  if (current)
+  {
+    return current->TmpSize; // Se encontró el archivo en la cola, se regresa el tmpSize
+  }
+  return FALSE; // La cola está vacía o no se encontró el archivo
 }

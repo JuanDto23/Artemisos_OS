@@ -128,6 +128,22 @@ void print_history(char buffers[NUMBER_BUFFERS][SIZE_BUFFER], WINDOW *inner_prom
     }
   }
 }
+// Cuenta el número de lineas
+int count_lines(FILE *file)
+{
+  FILE *it = file;  // Auxiliar para no modificar el puntero al inicio del archivo (con cada lectura se recorre el "cursor").
+  int lines = 0; 
+  char bufer[INSTRUCTION_SIZE];
+  //while ((c = fgetc(it) != EOF)) {
+    //if (c == '\n') lines++;
+  //}
+  while (fgets(bufer, sizeof(bufer), it)) {
+    lines++; // Incrementa el contador cada vez que se lee una línea
+  }
+  it = NULL;
+  return lines;
+}
+
 
 /*------------------------------FUNCIONES PRINCIPALES------------------------------*/
 // Manejo de comandos ingresados por el usuario en la línea de comandos
@@ -279,6 +295,9 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
   int value_par2 = 0;         // Almacena el uid como valor numerico
   int pid_to_search = 0;      // Variable para almacenar el pid del pcb a matar
   FILE *file = NULL;
+  int numMarcos = 0;          // Almacena el número de marcos del archivo a cargar
+  int lines = 0;              // Auxiliar para obtener los marcos despueś del techo
+  //int tmp = 0;                // Guarda los marcos de un proceso ya cargado en el simulador
 
   // Se separa en tokens el comando leído de prompt
   sscanf(buffer, "%s %s %s", command, parameter1, parameter2); // Que pasa si como segundo parámetro es una a?
@@ -321,16 +340,32 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
         file = fopen(parameter1, "r");
         if (file)
         {
+          // Se calculan el número de marcos/páginas/columnas que ocupará el proceso en el SWAP
+          lines = count_lines(file);
+          numMarcos = (int) ceil((double) lines / PAGE_SIZE);  // Función techo para considerar las lineas restantes que no abarcan todo un marco
+          //mvwprintw(gui->inner_msg, 1, 0, "Numero de lineas: %d, Marcos: %d", lines, numMarcos);
+          //sleep(3);
+          if(lines > TOTAL_INSTRUCTIONS)
+          {
+            // El proceso no puede ser creado, mensaje de actualizar el SO
+            mvwprintw(gui->inner_msg, 1, 0, "El archivo excede el tamaño del SWAP, atualice el sistema operativo.");
+            wrefresh(gui->inner_msg);
+            enqueue(create_pcb(&ready->pid, parameter1, &file, value_par2, numMarcos), finished);
+            fclose(file);
+            return 0;
+          }
+
           /*
             Se verifica si el usuario es nuevo o no (tiene algún proceso en Ejecución o Listos).
             Si no tienen ninguno, se incrementa el NumUs, si es el caso, el KCPUxu se inicia en cero
           */
-          PCB *new_pcb = create_pcb(&ready->pid, parameter1, &file, value_par2);
+          PCB *new_pcb = create_pcb(&ready->pid, parameter1, &file, value_par2, numMarcos);
           if (!search_uid(value_par2, *execution) && !search_uid(value_par2, *ready))
           {
             NumUs++; 
           } 
-          else { // El usuario ya tiene procesos, se actualiza KCPUxU en común al usuario
+          else
+          { // El usuario ya tiene procesos, se actualiza KCPUxU en común al usuario
             int KCPUxU;
             // Se verifica si hay algún proceso en Listos para actualizar KCPUxU
             if((KCPUxU = get_KCPUxU(new_pcb->UID, *ready)) != -1){
@@ -340,6 +375,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
               new_pcb->KCPUxU = execution->head->KCPUxU;
             }
           }
+
           // Inserta el nodo en la cola Listos
           enqueue(new_pcb, ready);
           // Mensaje de proceso creado correctamente

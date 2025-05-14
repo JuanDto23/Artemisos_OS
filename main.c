@@ -2,10 +2,13 @@
 #include <unistd.h>
 #include <ncurses.h>
 #include <string.h>
+#include <stdlib.h>
 // Bibliotecas propias
 #include "pcb.h"
 #include "queue.h"
 #include "gui.h"
+
+FILE *createSWAP(void);
 
 int main(void)
 {
@@ -21,16 +24,19 @@ int main(void)
   unsigned timer = 0;                              // Temporizador para determinar la velocidad de escritura
   unsigned init_timer = 0;                         // Inicializador para timer, reduce la brecha entre MAX_TIME
   int minor_priority = 0;                          // Variable para saber que nodo extraer de ready para mandarlo a ejecución
+  FILE * swap = NULL;
 
   // Se crean instancias de las colas
   Queue execution;
   Queue ready;
   Queue finished;
+  Queue new;
 
   // Inicializar las colas
   initialize_queue(&execution);
   initialize_queue(&ready);
   initialize_queue(&finished);
+  initialize_queue(&new);
 
   // Se crea instancia de la GUI
   GUI gui;
@@ -45,6 +51,15 @@ int main(void)
   empty_processor(gui.inner_cpu); // Se imprime el contenido del CPU inicialmente vacío
   print_queues(gui.inner_queues, execution, ready, finished);
   print_prompt(gui.inner_prompt, 0); // Se imprime prompt en fila 0
+
+  swap = createSWAP();
+  if(!swap)
+  {
+    // Error en la creación del archivo SWAP
+    endwin();
+    exit(1);
+  }
+
   do
   {
     if (!execution.head) // Si la cola Ejecución está vacía
@@ -198,4 +213,36 @@ int main(void)
   endwin();     // Cierra la ventana
   printf("\n"); // Salto de línea en terminal
   return 0;
+}
+
+FILE *createSWAP(void)
+{
+  FILE *swap = fopen(FILENAME, "wb");
+  if (!swap)
+  {
+    //perror("Error al crear el archivo");
+    return NULL;
+  }
+  
+  size_t total_bytes = (size_t)TOTAL_INSTRUCTIONS * INSTRUCTION_SIZE;
+
+  // Crear un bloque completo lleno de '0'
+  char *buffer = (char *)malloc(total_bytes);
+  if (!buffer)
+  {
+    //perror("No se pudo asignar memoria");
+    fclose(swap);
+    return NULL;
+  }
+  memset(buffer, 0, total_bytes);
+  if (fwrite(buffer, 1, total_bytes, swap) != total_bytes)
+  {
+    //perror("Error al escribir en el archivo");
+    free(buffer);
+    fclose(swap);
+    return NULL;
+  }
+
+  free(buffer);
+  return swap;
 }
