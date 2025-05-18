@@ -13,7 +13,6 @@ typedef struct gui GUI;
 // Número de buffers, tamaño de buffer y tamaño de línea
 #define NUMBER_BUFFERS 3
 #define BUFFER_SIZE 66
-#define LINE_SIZE 34
 #define PROMPT_START 12
 
 // Valores booleanos
@@ -46,7 +45,7 @@ typedef struct pcb
   long CX;
   long DX;
   unsigned PC;
-  char IR[100];
+  char IR[INSTRUCTION_SIZE];
   FILE *program;
   char file_name[256];
   struct pcb *next;

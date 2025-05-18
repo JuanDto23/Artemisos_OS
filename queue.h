@@ -13,7 +13,7 @@ typedef struct queue
 } Queue;
 
 void initialize_queue(Queue *queue);
-PCB *create_pcb(int *pid, char *file_name, FILE **program, int iud, int TmpSize);
+PCB *create_pcb(int pid, char *file_name, FILE **program, int iud, int TmpSize);
 void enqueue(PCB *pcb, Queue *queue);
 PCB *dequeue(Queue *queue);
 void remove_pcb(PCB **pcb);
@@ -26,6 +26,5 @@ PCB *extract_by_priority(int priority, Queue * queue);
 void update_KCPUxU_per_process(int uid, Queue *queue);
 void update_parameters(Queue *queue);
 int get_KCPUxU(int uid, Queue queue);
-int search_file(char *file_name, Queue queue);
 int search_process(int uid, char *filename, Queue queue);
 #endif

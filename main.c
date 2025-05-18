@@ -18,7 +18,7 @@ int main(void)
   int index = 0;                                   // índice de buffer de prompt
   int result_interpretation = 0;                   // Retorno de interpretar la instrucción leída
   int index_history = 0;                           // Índice de buffer de historial seleccionado (↑ o ↓)
-  char line[LINE_SIZE] = {0};                      // Línea leída de archivo
+  char line[INSTRUCTION_SIZE] = {0};               // Línea leída de archivo
   int quantum = 0;                                 // Contador para el número de instrucciones antes de alcanzar el MAXQUANTUM
   int speed_level = 1;                             // Nivel de velocidad de lectura de instrucciones
   unsigned timer = 0;                              // Temporizador para determinar la velocidad de escritura

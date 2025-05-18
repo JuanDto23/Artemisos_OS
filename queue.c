@@ -38,9 +38,10 @@ PCB *create_pcb(int pid, char *file_name, FILE **program, int uid, int TmpSize)
     pcb->P = PBase;
     pcb->KCPU = 0;
     pcb->KCPUxU = 0;
-    W = 1.0 / NumUs; // Actualizar el valor de la variable global W = 1/NumUs
 
+    // Inicialización de parámetros de memoria
     pcb->TmpSize = TmpSize;
+    pcb->TMP = NULL;
   }
   
   return pcb; // Se retorna el nodo creado
@@ -298,7 +299,7 @@ void update_parameters(Queue *queue)
   }
 }
 
-//
+// Obtiene el KCPUxU del primer proceso del usuario especificado que encuentre
 int get_KCPUxU(int uid, Queue queue)
 {
   PCB *current = NULL;
@@ -322,7 +323,8 @@ int get_KCPUxU(int uid, Queue queue)
   return -1; // La cola está vacía o no se encontró el usuario
 }
 
-int search_file(char *file_name, Queue queue)
+// Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso del mismo usuario.
+int search_process(int uid, char *filename, Queue queue)
 {
   PCB *current = NULL;
   int found = FALSE;
@@ -330,8 +332,8 @@ int search_file(char *file_name, Queue queue)
   current = queue.head;
   while (current && !found)
   {
-    // Se comprueba que el archivo coincida con el archivo del nodo actual
-    found = !(strcmp(current->file_name, file_name));
+    // Se comprueba que el archivo y el id usuario coincidan con el dueño del nodo actual
+    found = !strcmp(current->file_name, filename) && (current->UID == uid);
     if (!found)
     {
       // Se avanza al siguiente nodo de la lista
@@ -340,11 +342,7 @@ int search_file(char *file_name, Queue queue)
   }
   if (current)
   {
-    return current->TmpSize; // Se encontró el archivo en la cola, se regresa el tmpSize
+    return TRUE; // Se encontró el archivo en la cola
   }
   return FALSE; // La cola está vacía o no se encontró el archivo
-}
-
-int search_process(int uid, char *filename, Queue queue)
-{
 }

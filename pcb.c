@@ -287,14 +287,15 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
 int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished)
 {
   /* TOKENS */
-  char command[256] = {0};
-  char parameter1[256] = {0};
+  char command[256] = {0};    // Almacena el comando ingresado
+  char parameter1[256] = {0}; // Almacena el nombre del archivo a cargar o el nombre del proceso a matar
   char parameter2[256] = {0}; // Almacena el id de usuario, se analiza con is_numeric
   int value_par2 = 0;         // Almacena el uid como valor numerico
   int pid_to_search = 0;      // Variable para almacenar el pid del pcb a matar
-  FILE *file = NULL;
-  int tmp_size = 0; // Almacena el número de marcos del archivo a cargar
-  int lines = 0;    // Auxiliar para obtener los marcos despueś del techo
+  FILE *file = NULL;          // Almacena el puntero al archivo a cargar
+  int tmp_size = 0;           // Almacena el número de marcos del archivo a cargar
+  int lines = 0;              // Almacena el número de líneas del archivo a cargar
+  int KCPUxU = 0;             // Almacena el valor de KCPUxU del usuario
 
   // Se separa en tokens el comando leído de prompt
   sscanf(buffer, "%s %s %s", command, parameter1, parameter2); // Que pasa si como segundo parámetro es una a?
@@ -337,9 +338,8 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
         file = fopen(parameter1, "r");
         if (file)
         {
-          // Total de lineas en el archivo
+          // Total de lineas en el archivo ignorando líneas vacías
           lines = count_lines(file);
-          mvwprintw(gui->inner_msg, 1, 0, "%d", lines);
           // Se calculan el número de marcos/páginas que ocupará el proceso en el SWAP
           tmp_size = (int)ceil((double)lines / PAGE_SIZE);
 
@@ -354,32 +354,33 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
 
           /*
             Se verifica si el usuario del nuevo proceso ya existe o no (tiene algún proceso en Ejecución o Listos).
-            Si no tienen ninguno, se incrementa el NumUs, si es el caso, el KCPUxU se empareja con el resto
+            Si no existe el usuario, se incrementa el NumUs.
+            Si existe, el KCPUxU se empareja con el resto de procesos del usuario.
           */
-          if (!search_uid(value_par2, *execution) && !search_uid(value_par2, *ready))
+          if (!search_uid(new_pcb->UID, *execution) && !search_uid(new_pcb->UID, *ready))
           {
             NumUs++;
           }
-          else
-          { // El usuario ya tiene procesos, se actualiza KCPUxU en común al usuario
-            int KCPUxU;
-            // Se verifica si hay algún proceso en Listos para actualizar KCPUxU
-            if ((KCPUxU = get_KCPUxU(new_pcb->UID, *ready)) != -1)
-            {
-              new_pcb->KCPUxU = KCPUxU;
-            }
-            else
-            { // Si no hay un proceso del usuario en Listos, seguramente está en Ejecución
-              new_pcb->KCPUxU = execution->head->KCPUxU;
-            }
+          /* El usuario ya tiene procesos, se actualiza KCPUxU en común al usuario
+             Se verifica si hay algún proceso en Listos para actualizar KCPUxU */
+          else if ((KCPUxU = get_KCPUxU(new_pcb->UID, *ready)) != -1)
+          {
+            new_pcb->KCPUxU = KCPUxU;
           }
+          else // Si no hay un proceso del usuario en Listos, seguramente está en Ejecución
+          {
+            new_pcb->KCPUxU = execution->head->KCPUxU;
+          }
+
+          // Se actualiza el peso W una vez creado el nuevo proceso y actualizado el NumUs
+          if (NumUs) W = 1.0 / NumUs;
 
           /*
             Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso
-            del mismo usuario. Ya sea en Listos o en Ejecución.
-          */
-          if (search_process(value_par2, parameter1, *execution) || search_process(value_par2, parameter1, *ready))
+            del mismo usuario. Ya sea en Listos o en Ejecución */
+          if (search_process(new_pcb->UID, new_pcb->file_name, *execution) || search_process(new_pcb->UID, new_pcb->file_name, *ready))
           {
+            // De haberse encontrado, asignar la misma TMP al nuevo proceso
           }
           else if (lines < TOTAL_INSTRUCTIONS) // Verificar que el proceso sea de menor tamaño que la SWAP
           {
@@ -525,7 +526,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
 int read_line(FILE **f, char *line)
 {
   // Se lee una línea del archivo
-  fgets(line, LINE_SIZE, *f);
+  fgets(line, INSTRUCTION_SIZE, *f);
   if (!feof(*f)) // Si no se ha llegado al final del archivo
   {
     return 1; // Hay todavía líneas por leer
