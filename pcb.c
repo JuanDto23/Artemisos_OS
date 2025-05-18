@@ -131,13 +131,15 @@ void print_history(char buffers[NUMBER_BUFFERS][BUFFER_SIZE], WINDOW *inner_prom
 // Cuenta el número de lineas
 int count_lines(FILE *file)
 {
-  FILE *it = file; // Copia auxiliar
-  int lines = 0, c = 0;
-  while ((c = fgetc(it)) != EOF)
+  int lines = 0;
+  int c, last = '\n';
+  while ((c = fgetc(file)) != EOF)
   {
-    if (c == '\n')
+    if (c == '\n' && last != '\n')
       lines++;
+    last = c;
   }
+  rewind(file);
   return lines;
 }
 
@@ -392,7 +394,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
             // Enviar el proceso directamente a terminados, indicando el motivo.
             mvwprintw(gui->inner_msg, 1, 0, "El programa excede el tamaño del SWAP. Actualice el sistema.");
             enqueue(create_pcb(ready->pid, parameter1, &file, value_par2, tmp_size), finished);
-            //fclose(file);
+            // fclose(file);
             return 0;
           }
 
