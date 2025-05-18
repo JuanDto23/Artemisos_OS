@@ -344,3 +344,7 @@ int search_file(char *file_name, Queue queue)
   }
   return FALSE; // La cola está vacía o no se encontró el archivo
 }
+
+int search_process(int uid, char *filename, Queue queue)
+{
+}

@@ -376,7 +376,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
             Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso
             del mismo usuario. Ya sea en Listos o en Ejecución.
           */
-          if (search_process(value_par2, file, *execution) || search_process(value_par2, *ready))
+          if (search_process(value_par2, parameter1, *execution) || search_process(value_par2, parameter1, *ready))
           {
           }
           else if (lines < TOTAL_INSTRUCTIONS) // Verificar que el proceso sea de menor tamaño que la SWAP
