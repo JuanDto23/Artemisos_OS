@@ -16,14 +16,14 @@ void initialize_queue(Queue *queue)
 }
 
 // Crea un PCB y lo retorna
-PCB *create_pcb(int *pid, char *file_name, FILE **program, int uid, int TmpSize)
+PCB *create_pcb(int pid, char *file_name, FILE **program, int uid, int TmpSize)
 {
   PCB *pcb = NULL; // Nodo a retornar
 
   pcb = (PCB *)malloc(sizeof(PCB));
   if (pcb != NULL) // Hay memoria disponible
   {
-    pcb->pid = *pid;
+    pcb->pid = pid;
     pcb->AX = 0;
     pcb->BX = 0;
     pcb->CX = 0;
@@ -32,14 +32,15 @@ PCB *create_pcb(int *pid, char *file_name, FILE **program, int uid, int TmpSize)
     strcpy(pcb->file_name, file_name); // No se puede asignar cadenas diréctamente
     pcb->program = *program;
     pcb->next = NULL;
-    // Se inicializan los campos recién agregados
+
+    // Nuevas variables para el Fair Share Schedule (equitativo)
     pcb->UID = uid;
     pcb->P = PBase;
     pcb->KCPU = 0;
     pcb->KCPUxU = 0;
-    // Actualizar el valor de la variable global W = 1/NumUs
-    W = 1.0 / NumUs;
-    pcb -> TmpSize = TmpSize;
+    W = 1.0 / NumUs; // Actualizar el valor de la variable global W = 1/NumUs
+
+    pcb->TmpSize = TmpSize;
   }
   
   return pcb; // Se retorna el nodo creado

@@ -22,7 +22,7 @@ const int PBase = 60;
 void initialize_buffer(char *buffer, int *index)
 {
   // Se limpia el buffer
-  for (int i = 0; i < SIZE_BUFFER; i++)
+  for (int i = 0; i < BUFFER_SIZE; i++)
   {
     buffer[i] = 0;
   }
@@ -115,7 +115,7 @@ int end_simulation(WINDOW *inner_msg)
 }
 
 // Imprime el historial de comandos en la ventana
-void print_history(char buffers[NUMBER_BUFFERS][SIZE_BUFFER], WINDOW *inner_prompt)
+void print_history(char buffers[NUMBER_BUFFERS][BUFFER_SIZE], WINDOW *inner_prompt)
 {
   // Se imprimen los buffers de historial
   for (int i = 1; i < NUMBER_BUFFERS; i++)
@@ -131,23 +131,19 @@ void print_history(char buffers[NUMBER_BUFFERS][SIZE_BUFFER], WINDOW *inner_prom
 // Cuenta el número de lineas
 int count_lines(FILE *file)
 {
-  FILE *it = file;  // Auxiliar para no modificar el puntero al inicio del archivo (con cada lectura se recorre el "cursor").
-  int lines = 0; 
-  char bufer[INSTRUCTION_SIZE];
-  //while ((c = fgetc(it) != EOF)) {
-    //if (c == '\n') lines++;
-  //}
-  while (fgets(bufer, sizeof(bufer), it)) {
-    lines++; // Incrementa el contador cada vez que se lee una línea
+  FILE *it = file; // Copia auxiliar
+  int lines = 0, c = 0;
+  while ((c = fgetc(it)) != EOF)
+  {
+    if (c == '\n')
+      lines++;
   }
-  it = NULL;
   return lines;
 }
 
-
 /*------------------------------FUNCIONES PRINCIPALES------------------------------*/
 // Manejo de comandos ingresados por el usuario en la línea de comandos
-int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
+int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished,
                      unsigned *timer, unsigned *init_timer, int *speed_level)
@@ -273,7 +269,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][SIZE_BUFFER],
     }
     else // Si se presionó cualquier otra tecla
     {
-      if (*index < SIZE_BUFFER - 1)
+      if (*index < BUFFER_SIZE - 1)
       {
         // Concatena la tecla presionada al buffer para su posterior impresión
         buffers[0][(*index)++] = *c;
@@ -295,9 +291,8 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
   int value_par2 = 0;         // Almacena el uid como valor numerico
   int pid_to_search = 0;      // Variable para almacenar el pid del pcb a matar
   FILE *file = NULL;
-  int numMarcos = 0;          // Almacena el número de marcos del archivo a cargar
-  int lines = 0;              // Auxiliar para obtener los marcos despueś del techo
-  //int tmp = 0;                // Guarda los marcos de un proceso ya cargado en el simulador
+  int tmp_size = 0; // Almacena el número de marcos del archivo a cargar
+  int lines = 0;    // Auxiliar para obtener los marcos despueś del techo
 
   // Se separa en tokens el comando leído de prompt
   sscanf(buffer, "%s %s %s", command, parameter1, parameter2); // Que pasa si como segundo parámetro es una a?
@@ -340,40 +335,65 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
         file = fopen(parameter1, "r");
         if (file)
         {
-          // Se calculan el número de marcos/páginas/columnas que ocupará el proceso en el SWAP
+          // Total de lineas en el archivo
           lines = count_lines(file);
-          numMarcos = (int) ceil((double) lines / PAGE_SIZE);  // Función techo para considerar las lineas restantes que no abarcan todo un marco
-          //mvwprintw(gui->inner_msg, 1, 0, "Numero de lineas: %d, Marcos: %d", lines, numMarcos);
-          //sleep(3);
-          if(lines > TOTAL_INSTRUCTIONS)
+          mvwprintw(gui->inner_msg, 1, 0, "%d", lines);
+          // Se calculan el número de marcos/páginas que ocupará el proceso en el SWAP
+          tmp_size = (int)ceil((double)lines / PAGE_SIZE);
+
+          // Se crea el proceso inicializando sus atributos
+          PCB *new_pcb = create_pcb(ready->pid, parameter1, &file, value_par2, tmp_size);
+          if (!new_pcb)
           {
-            // El proceso no puede ser creado, mensaje de actualizar el SO
-            mvwprintw(gui->inner_msg, 1, 0, "El archivo excede el tamaño del SWAP, atualice el sistema operativo.");
+            mvwprintw(gui->inner_msg, 1, 0, "Error: no pudo crear el proceso %d [%s].", ready->pid, parameter1);
             wrefresh(gui->inner_msg);
-            enqueue(create_pcb(&ready->pid, parameter1, &file, value_par2, numMarcos), finished);
-            fclose(file);
             return 0;
           }
 
           /*
-            Se verifica si el usuario es nuevo o no (tiene algún proceso en Ejecución o Listos).
-            Si no tienen ninguno, se incrementa el NumUs, si es el caso, el KCPUxu se inicia en cero
+            Se verifica si el usuario del nuevo proceso ya existe o no (tiene algún proceso en Ejecución o Listos).
+            Si no tienen ninguno, se incrementa el NumUs, si es el caso, el KCPUxU se empareja con el resto
           */
-          PCB *new_pcb = create_pcb(&ready->pid, parameter1, &file, value_par2, numMarcos);
           if (!search_uid(value_par2, *execution) && !search_uid(value_par2, *ready))
           {
-            NumUs++; 
-          } 
+            NumUs++;
+          }
           else
           { // El usuario ya tiene procesos, se actualiza KCPUxU en común al usuario
             int KCPUxU;
             // Se verifica si hay algún proceso en Listos para actualizar KCPUxU
-            if((KCPUxU = get_KCPUxU(new_pcb->UID, *ready)) != -1){
+            if ((KCPUxU = get_KCPUxU(new_pcb->UID, *ready)) != -1)
+            {
               new_pcb->KCPUxU = KCPUxU;
             }
-            else { // Si no hay un proceso del usuario en Listos, seguramente está en Ejecución
+            else
+            { // Si no hay un proceso del usuario en Listos, seguramente está en Ejecución
               new_pcb->KCPUxU = execution->head->KCPUxU;
             }
+          }
+
+          /*
+            Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso
+            del mismo usuario. Ya sea en Listos o en Ejecución.
+          */
+          if (search_process(value_par2, file, *execution) || search_process(value_par2, *ready))
+          {
+          }
+          else if (lines < TOTAL_INSTRUCTIONS) // Verificar que el proceso sea de menor tamaño que la SWAP
+          {
+            // Contar la cantidad de marcos libres en swap
+
+            // Si la cantidad de marcos libres en SWAP alcanzan para cargar el proceso
+
+            // No hay swap libre para cargar el proceso
+          }
+          else // La swap no es suficiente para cargar el proceso
+          {
+            // Enviar el proceso directamente a terminados, indicando el motivo.
+            mvwprintw(gui->inner_msg, 1, 0, "El programa excede el tamaño del SWAP. Actualice el sistema.");
+            enqueue(create_pcb(ready->pid, parameter1, &file, value_par2, tmp_size), finished);
+            //fclose(file);
+            return 0;
           }
 
           // Inserta el nodo en la cola Listos
@@ -440,11 +460,12 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           // Se imprime procesador vacío y se muestra mensaje
           empty_processor(gui->inner_cpu);
           mvwprintw(gui->inner_msg, 0, 0, "El pcb con pid [%d] ha sido terminado.", pid_to_search);
-          
+
           /* Si solo había un proceso en Ejecución y nada en Listos,
              se debe de refrescar la impresión de las colas para que
              se vea que el proceso está en la cola Finalizados */
-          if (!ready->head) {
+          if (!ready->head)
+          {
             print_queues(gui->inner_queues, *execution, *ready, *finished);
           }
         }
@@ -493,7 +514,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
   {
     mvwprintw(gui->inner_msg, 0, 0, "Error: comando \"%s\" no encontrado.", command); // Comando no encontrado
   }
-  // Refrescar subventana d mensajes
+  // Refrescar subventana de mensajes
   wrefresh(gui->inner_msg);
   return 0; // Indica que no salió del programa
 }
@@ -502,7 +523,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
 int read_line(FILE **f, char *line)
 {
   // Se lee una línea del archivo
-  fgets(line, SIZE_LINE, *f);
+  fgets(line, LINE_SIZE, *f);
   if (!feof(*f)) // Si no se ha llegado al final del archivo
   {
     return 1; // Hay todavía líneas por leer

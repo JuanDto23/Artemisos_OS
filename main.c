@@ -8,23 +8,23 @@
 #include "queue.h"
 #include "gui.h"
 
-FILE *createSWAP(void);
+FILE *create_swap(void);
 
 int main(void)
 {
   int exited = FALSE;                              // Indica si salió (ESC ó EXIT)
-  char buffers[NUMBER_BUFFERS][SIZE_BUFFER] = {0}; // Buffers de historial
+  char buffers[NUMBER_BUFFERS][BUFFER_SIZE] = {0}; // Buffers de historial
   int c = 0;                                       // Carácter introducido por usuario
   int index = 0;                                   // índice de buffer de prompt
   int result_interpretation = 0;                   // Retorno de interpretar la instrucción leída
   int index_history = 0;                           // Índice de buffer de historial seleccionado (↑ o ↓)
-  char line[SIZE_LINE] = {0};                      // Línea leída de archivo
+  char line[LINE_SIZE] = {0};                      // Línea leída de archivo
   int quantum = 0;                                 // Contador para el número de instrucciones antes de alcanzar el MAXQUANTUM
   int speed_level = 1;                             // Nivel de velocidad de lectura de instrucciones
   unsigned timer = 0;                              // Temporizador para determinar la velocidad de escritura
   unsigned init_timer = 0;                         // Inicializador para timer, reduce la brecha entre MAX_TIME
   int minor_priority = 0;                          // Variable para saber que nodo extraer de ready para mandarlo a ejecución
-  FILE * swap = NULL;
+  FILE *swap = NULL;                               // Bloque contiguo de almacenamiento binario en disco duro
 
   // Se crean instancias de las colas
   Queue execution;
@@ -51,15 +51,7 @@ int main(void)
   empty_processor(gui.inner_cpu); // Se imprime el contenido del CPU inicialmente vacío
   print_queues(gui.inner_queues, execution, ready, finished);
   print_prompt(gui.inner_prompt, 0); // Se imprime prompt en fila 0
-
-  swap = createSWAP();
-  if(!swap)
-  {
-    // Error en la creación del archivo SWAP
-    endwin();
-    exit(1);
-  }
-
+  swap = create_swap();              // Crear un archivo lleno de ceros al inicio del programa (SWAP)
   do
   {
     if (!execution.head) // Si la cola Ejecución está vacía
@@ -215,34 +207,40 @@ int main(void)
   return 0;
 }
 
-FILE *createSWAP(void)
+/* Crear un archivo lleno de ceros al inicio del programa,
+   para el manejo de memoria de intercambio (swap) */
+FILE *create_swap(void)
 {
-  FILE *swap = fopen(FILENAME, "wb");
+  // Crear el archivo binario SWAP
+  FILE *swap = fopen("SWAP", "wb");
   if (!swap)
   {
-    //perror("Error al crear el archivo");
-    return NULL;
+    endwin();
+    exit(1);
   }
-  
+
+  // Determinar el tamaño en bytes del archivo SWAP
   size_t total_bytes = (size_t)TOTAL_INSTRUCTIONS * INSTRUCTION_SIZE;
 
-  // Crear un bloque completo lleno de '0'
-  char *buffer = (char *)malloc(total_bytes);
+  // Crear un bloque de memoria completo lleno de 0's
+  int *buffer = (int *)malloc(total_bytes);
   if (!buffer)
   {
-    //perror("No se pudo asignar memoria");
     fclose(swap);
-    return NULL;
+    endwin();
+    exit(1);
   }
   memset(buffer, 0, total_bytes);
+
+  // Escribir en todo el archivo SWAP los 0's del bloque de memoria inicializada
   if (fwrite(buffer, 1, total_bytes, swap) != total_bytes)
   {
-    //perror("Error al escribir en el archivo");
-    free(buffer);
     fclose(swap);
-    return NULL;
+    endwin();
+    exit(1);
   }
 
+  // Se libera el bloque de memoria inicializada
   free(buffer);
   return swap;
 }

@@ -181,7 +181,7 @@ void empty_processor(WINDOW *inner_cpu)
 // Se limpia la línea de prompt que se especifique
 void clear_prompt(WINDOW *inner_prompt, int row)
 {
-  for (int i = 0; i < SIZE_BUFFER; i++)
+  for (int i = 0; i < BUFFER_SIZE; i++)
   {
     mvwaddch(inner_prompt, row, PROMPT_START + i, ' ');
   }
