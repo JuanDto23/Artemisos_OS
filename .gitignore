@@ -9,3 +9,7 @@
 *.out
 *.log
 *.swp
+
+# Ignorar archivos swap generados por el simulador
+SWAP
+swap
