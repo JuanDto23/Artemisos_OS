@@ -148,7 +148,7 @@ int count_lines(FILE *file)
 int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished,
-                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms)
+                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE **swap)
 {
   // Si se presionó una tecla en la terminal (kbhit)
   if (kbhit())
@@ -162,7 +162,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
       // Se le coloca carácter nulo para finalizar la cadena prompt
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
-      exited = evaluate_command(gui, buffers[0], execution, ready, finished, tms);
+      exited = evaluate_command(gui, buffers[0], execution, ready, finished, tms, swap);
       // Se crea historial
       for (int i = NUMBER_BUFFERS - 1; i >= 0; i--)
       {
@@ -284,7 +284,8 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
 }
 
 // Evalúa los comandos ingresados por el usuario
-int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, TMS * tms)
+int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, 
+  TMS * tms, FILE **swap)
 {
   /* TOKENS */
   char command[256] = {0};    // Almacena el comando ingresado
@@ -388,9 +389,8 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
             // Se reserva espacio para la tmp del proceso
             new_pcb->TMP = (int *) malloc(sizeof(int) * tmp_size);
 
-            // Registrar lista de direcciones de los múltiples marcos que use el nuevo proceso
-
             // Carga el proceso en la SWAP
+            load_to_swap(new_pcb, tms, swap, lines, gui);
 
             //Disminuye la cantidad de marcos disponibles
             tms->available_pages -= tmp_size;

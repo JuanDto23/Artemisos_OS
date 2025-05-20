@@ -60,7 +60,7 @@ int main(void)
       // Gestor de comandos de terminal
       exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                 &execution, &ready, &finished,
-                                &timer, &init_timer, &speed_level, &tms);
+                                &timer, &init_timer, &speed_level, &tms, &swap);
       if (ready.head) // Verifica si hay nodos en la cola Listos
       {
         // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
@@ -76,7 +76,7 @@ int main(void)
         // Gestor de comandos de terminal
         exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                   &execution, &ready, &finished,
-                                  &timer, &init_timer, &speed_level, &tms);
+                                  &timer, &init_timer, &speed_level, &tms, &swap);
       }
       else // Si se alcanzó el MAX_TIME se ejecuta la instrucción
       {

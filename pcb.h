@@ -80,9 +80,10 @@ int count_lines(FILE *file);
 int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished,
-                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms);
+                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE ** swap);
 
-int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, TMS * tms);
+int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, 
+                     TMS * tms, FILE **swap);
 
 int read_line(FILE **program, char *line);
 int interpret_instruction(GUI *gui, char *line, PCB *pcb);

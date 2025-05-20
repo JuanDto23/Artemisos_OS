@@ -1,6 +1,10 @@
 #ifndef _MEMORY_H
 #define _MEMORY_H
 
+// Definición adelantada del PCB
+typedef struct pcb PCB;
+typedef struct gui GUI;
+
 // Parámetros de memoria
 #define MAX_PAGES 4096
 #define PAGE_SIZE 16
@@ -13,6 +17,10 @@ typedef struct tms {
 }TMS;
 
 FILE *create_swap(void);
+void initialize_tms(TMS *tms);
 void get_available_pages(TMS * tms);
+void read_line_from_file(FILE *file, char *buffer);
+void load_to_swap(PCB * new_pcb, TMS *tms, FILE **swap, int lines, GUI *gui);
+
 
 #endif
