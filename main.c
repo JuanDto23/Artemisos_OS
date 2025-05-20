@@ -7,8 +7,7 @@
 #include "pcb.h"
 #include "queue.h"
 #include "gui.h"
-
-FILE *create_swap(void);
+#include "memory.h"
 
 int main(void)
 {
@@ -25,6 +24,7 @@ int main(void)
   unsigned init_timer = 0;                         // Inicializador para timer, reduce la brecha entre MAX_TIME
   int minor_priority = 0;                          // Variable para saber que nodo extraer de ready para mandarlo a ejecución
   FILE *swap = NULL;                               // Bloque contiguo de almacenamiento binario en disco duro
+  TMS tms;                                         // Estructura con: Arreglo de enteros para marcar el estado de los marcoos de la SWAP (disponible/ocupado) y número de marcos disponibles
 
   // Se crean instancias de las colas
   Queue execution;
@@ -52,6 +52,7 @@ int main(void)
   print_queues(gui.inner_queues, execution, ready, finished);
   print_prompt(gui.inner_prompt, 0); // Se imprime prompt en fila 0
   swap = create_swap();              // Crear un archivo lleno de ceros al inicio del programa (SWAP)
+  initialize_tms(&tms);   // Inicializar tabla TMS (arreglo en ceros y páginas máximas)
   do
   {
     if (!execution.head) // Si la cola Ejecución está vacía
@@ -59,7 +60,7 @@ int main(void)
       // Gestor de comandos de terminal
       exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                 &execution, &ready, &finished,
-                                &timer, &init_timer, &speed_level);
+                                &timer, &init_timer, &speed_level, &tms);
       if (ready.head) // Verifica si hay nodos en la cola Listos
       {
         // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
@@ -75,7 +76,7 @@ int main(void)
         // Gestor de comandos de terminal
         exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                   &execution, &ready, &finished,
-                                  &timer, &init_timer, &speed_level);
+                                  &timer, &init_timer, &speed_level, &tms);
       }
       else // Si se alcanzó el MAX_TIME se ejecuta la instrucción
       {
@@ -205,42 +206,4 @@ int main(void)
   endwin();     // Cierra la ventana
   printf("\n"); // Salto de línea en terminal
   return 0;
-}
-
-/* Crear un archivo lleno de ceros al inicio del programa,
-   para el manejo de memoria de intercambio (swap) */
-FILE *create_swap(void)
-{
-  // Crear el archivo binario SWAP
-  FILE *swap = fopen("SWAP", "wb");
-  if (!swap)
-  {
-    endwin();
-    exit(1);
-  }
-
-  // Determinar el tamaño en bytes del archivo SWAP
-  size_t total_bytes = (size_t)TOTAL_INSTRUCTIONS * INSTRUCTION_SIZE;
-
-  // Crear un bloque de memoria completo lleno de 0's
-  int *buffer = (int *)malloc(total_bytes);
-  if (!buffer)
-  {
-    fclose(swap);
-    endwin();
-    exit(1);
-  }
-  memset(buffer, 0, total_bytes);
-
-  // Escribir en todo el archivo SWAP los 0's del bloque de memoria inicializada
-  if (fwrite(buffer, 1, total_bytes, swap) != total_bytes)
-  {
-    fclose(swap);
-    endwin();
-    exit(1);
-  }
-
-  // Se libera el bloque de memoria inicializada
-  free(buffer);
-  return swap;
 }

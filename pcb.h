@@ -1,6 +1,8 @@
 #ifndef _PCB_H
 #define _PCB_H
 
+#include "memory.h"
+
 // Declaración adelantada de Queue y GUI
 typedef struct queue Queue;
 typedef struct gui GUI;
@@ -29,12 +31,6 @@ typedef struct gui GUI;
    máxima de instrucciones consecutivas que se
    podrán ejecutar por cada proceso */
 #define MAXQUANTUM 4
-
-// Parámetros de memoria
-#define MAX_PAGES 4096
-#define PAGE_SIZE 16
-#define INSTRUCTION_SIZE 32
-#define TOTAL_INSTRUCTIONS 65536
 
 // Creación del bloque de control de procesos
 typedef struct pcb
@@ -84,9 +80,9 @@ int count_lines(FILE *file);
 int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished,
-                     unsigned *timer, unsigned *init_timer, int *speed_level);
+                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms);
 
-int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished);
+int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, TMS * tms);
 
 int read_line(FILE **program, char *line);
 int interpret_instruction(GUI *gui, char *line, PCB *pcb);

@@ -135,11 +135,11 @@ int count_lines(FILE *file)
   int c, last = '\n';
   while ((c = fgetc(file)) != EOF)
   {
-    if (c == '\n' && last != '\n')
+    if (c == '\n' && last != '\n')      // 2 saltos de líneas consecutivos indican una línea vacía
       lines++;
     last = c;
   }
-  rewind(file);
+  rewind(file); // Se regresa el puntero al inicio del archivo para su posterior lectura y escritura en SWAP
   return lines;
 }
 
@@ -148,7 +148,7 @@ int count_lines(FILE *file)
 int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished,
-                     unsigned *timer, unsigned *init_timer, int *speed_level)
+                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms)
 {
   // Si se presionó una tecla en la terminal (kbhit)
   if (kbhit())
@@ -162,7 +162,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
       // Se le coloca carácter nulo para finalizar la cadena prompt
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
-      exited = evaluate_command(gui, buffers[0], execution, ready, finished);
+      exited = evaluate_command(gui, buffers[0], execution, ready, finished, tms);
       // Se crea historial
       for (int i = NUMBER_BUFFERS - 1; i >= 0; i--)
       {
@@ -284,7 +284,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
 }
 
 // Evalúa los comandos ingresados por el usuario
-int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished)
+int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, TMS * tms)
 {
   /* TOKENS */
   char command[256] = {0};    // Almacena el comando ingresado
@@ -361,8 +361,8 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           {
             NumUs++;
           }
-          /* El usuario ya tiene procesos, se actualiza KCPUxU en común al usuario
-             Se verifica si hay algún proceso en Listos para actualizar KCPUxU */
+          /* El usuario ya tiene procesos, se actualiza KCPUxU en común al usuario,
+             Se verifica primero si hay algún proceso en Listos para actualizarlo*/
           else if ((KCPUxU = get_KCPUxU(new_pcb->UID, *ready)) != -1)
           {
             new_pcb->KCPUxU = KCPUxU;
@@ -382,13 +382,19 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           {
             // De haberse encontrado, asignar la misma TMP al nuevo proceso
           }
-          else if (lines < TOTAL_INSTRUCTIONS) // Verificar que el proceso sea de menor tamaño que la SWAP
+          else if (tmp_size < tms -> available_pages) // Verificar que el proceso ocupe menos de los marcos disponibles en SWAP (TMS)
           {
-            // Contar la cantidad de marcos libres en swap
 
-            // Si la cantidad de marcos libres en SWAP alcanzan para cargar el proceso
+            // Se reserva espacio para la tmp del proceso
+            new_pcb->TMP = (int *) malloc(sizeof(int) * tmp_size);
 
-            // No hay swap libre para cargar el proceso
+            // Registrar lista de direcciones de los múltiples marcos que use el nuevo proceso
+
+            // Carga el proceso en la SWAP
+
+            //Disminuye la cantidad de marcos disponibles
+            tms->available_pages -= tmp_size;
+
           }
           else // La swap no es suficiente para cargar el proceso
           {
@@ -399,7 +405,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
             return 0;
           }
 
-          // Inserta el nodo en la cola Listos
+          // Inserta el nodo en la cola Listos despues de verificar las condiciones de SWAP (si es proceso nuevo o no)
           enqueue(new_pcb, ready);
           // Mensaje de proceso creado correctamente
           mvwprintw(gui->inner_msg, 0, 0, "Proceso %d [%s] creado correctamente.", ready->pid, parameter1);
