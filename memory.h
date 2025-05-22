@@ -10,6 +10,8 @@ typedef struct gui GUI;
 #define PAGE_SIZE 16
 #define INSTRUCTION_SIZE 32
 #define TOTAL_INSTRUCTIONS 65536
+#define PAGE_JUMP 0x200
+
 
 typedef struct tms {
   int table[MAX_PAGES];

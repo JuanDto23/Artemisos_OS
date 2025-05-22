@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ncurses.h>
+#include <unistd.h>
 // Bibliotecas propias
 #include "memory.h"
 #include "pcb.h"
@@ -69,42 +70,67 @@ void read_line_from_file(FILE *file, char *buffer)
 // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
 void load_to_swap(PCB *new_pcb, TMS *tms, FILE **swap, int lines, GUI *gui)
 {
-  int k = 0;
-  int pages_needed = new_pcb->TmpSize;
-  char buffer[INSTRUCTION_SIZE];
+  int k = 0;                           // Iterador para TMP del nuevo proceso
+  int pages_needed = new_pcb->TmpSize; // Páginas necesitadas por el proceso
+  char buffer[INSTRUCTION_SIZE] = {0};       // Buffer para la instrucción leída del archivo
 
+
+  // Recorre la TMS en busca de marcos disponibles (i indica el número de páginas a avanzar en la swap)
   for (int i = 0; i < MAX_PAGES; i++)
   {
+    // Si el proceso ya no neces
     if (!pages_needed)
       break;
-
-    if (tms->table[i] == 0) 
+    // Busca una ágina disponible que no este ocupada por el pid del proceso
+    if (tms->table[i] == 0)
     {
-      // Se lee la instrucción desde archivo de programa
+      // Se lee la instrucción desde archivo de programa (j indica el número de instrucciones a avanzar en la pagina i)
       for (int j = 0; j < PAGE_SIZE; j++)
       {
-        if (lines)
+        if (lines) 
         {
           read_line_from_file(new_pcb->program, buffer);
           if (buffer[0] != '\0')
           {
-            lines--;
-            fseek(*swap, i*0x200 | j*0x20, SEEK_SET);
+            wclear(gui->inner_msg);
+            mvwprintw(gui->inner_msg, 2, 0, "lines = %d ir = %s", lines, buffer);
+            wrefresh(gui->inner_msg);
+            sleep(1);
+            fseek(*swap, i * PAGE_JUMP | j * INSTRUCTION_SIZE, SEEK_SET);
             // Se escribe la instrucción del buffer a la swap
             fwrite(buffer, sizeof(char), strlen(buffer), *swap);
-            tms->table[i] = new_pcb->pid; // Se marca la página ocupada en la TMS con el pid
-            pages_needed--;
-            // Registrar lista de direcciones de los múltiples marcos que use el nuevo proceso en su TMP
-            new_pcb->TMP[k++] = i;
+            mvwprintw(gui->inner_msg, 3, 0, "%lx", ftell(*swap));
+            wrefresh(gui->inner_msg);
+            sleep(1);
+            lines--;
           }
-          else {
-            j--;
+          else
+          {
+            j--;  // Evita dejar una instrucción vacía en el SWAP si el buffer tiene '\0' en el primer índice
           }
         }
         else
           break;
       }
-
-    }
+      tms->table[i] = new_pcb->pid; // Se marca la página ocupada en la TMS con el pid
+      // Registrar lista de direcciones de los múltiples marcos que use el nuevo proceso en su TMP
+      new_pcb->TMP[k++] = i;
+      pages_needed--;
+    }   
   }
+  /* Impresión de la tms para verificar que si está ocupada
+  for(int i = 0; i < 5; i++)
+  {
+    mvwprintw(gui->inner_msg, 1, i, "%d ",tms->table[i] );
+
+  }
+  wrefresh(gui->inner_msg);*/
+  // Impresión de la tms para verificar que si está ocupada
+  /*
+  for(int i = 0; i < 2; i++)
+  {
+    mvwprintw(gui->inner_msg, i+1, 0, "%d ",new_pcb->TMP[i]);
+
+  }
+  wrefresh(gui->inner_msg);*/
 }
