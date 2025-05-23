@@ -74,63 +74,51 @@ void load_to_swap(PCB *new_pcb, TMS *tms, FILE **swap, int lines, GUI *gui)
   int pages_needed = new_pcb->TmpSize; // Páginas necesitadas por el proceso
   char buffer[INSTRUCTION_SIZE] = {0};       // Buffer para la instrucción leída del archivo
 
-
-  // Recorre la TMS en busca de marcos disponibles (i indica el número de páginas a avanzar en la swap)
+  // Recorre la TMS en busca de marcos disponibles
   for (int i = 0; i < MAX_PAGES; i++)
   {
-    // Si el proceso ya no neces
+    // Si el proceso ya no necesita más marcos, termina
     if (!pages_needed)
       break;
+
     // Busca una ágina disponible que no este ocupada por el pid del proceso
     if (tms->table[i] == 0)
     {
-      // Se lee la instrucción desde archivo de programa (j indica el número de instrucciones a avanzar en la pagina i)
+      // Se leen 16 instrucciones desde el archivo del proceso
       for (int j = 0; j < PAGE_SIZE; j++)
       {
+        // Si hay líneas válidas por leer
         if (lines) 
         {
+          // Se lee la línea válida
           read_line_from_file(new_pcb->program, buffer);
+          // Verifica que la línea leída no sea una vacía
           if (buffer[0] != '\0')
           {
-            wclear(gui->inner_msg);
-            mvwprintw(gui->inner_msg, 2, 0, "lines = %d ir = %s", lines, buffer);
-            wrefresh(gui->inner_msg);
-            sleep(1);
+            // Posiciona el puntero de archivo SWAP en el marco y desplazamiento correspondiente
             fseek(*swap, i * PAGE_JUMP | j * INSTRUCTION_SIZE, SEEK_SET);
             // Se escribe la instrucción del buffer a la swap
             fwrite(buffer, sizeof(char), strlen(buffer), *swap);
-            mvwprintw(gui->inner_msg, 3, 0, "%lx", ftell(*swap));
-            wrefresh(gui->inner_msg);
-            sleep(1);
+            // Como ya se escribió una línea, se decrementa las líneas dl archivo del proceso
             lines--;
           }
           else
           {
-            j--;  // Evita dejar una instrucción vacía en el SWAP si el buffer tiene '\0' en el primer índice
+            // Evita dejar una instrucción vacía en el SWAP si se leyó una línea vacía
+            j--;  
           }
         }
         else
+          // Si el archivo ya no cuenta con mas lineas por leer. 
           break;
       }
-      tms->table[i] = new_pcb->pid; // Se marca la página ocupada en la TMS con el pid
+      // Se marca la página ocupada en la TMS con el pid del proceso
+      tms->table[i] = new_pcb->pid; 
       // Registrar lista de direcciones de los múltiples marcos que use el nuevo proceso en su TMP
       new_pcb->TMP[k++] = i;
-      pages_needed--;
-    }   
+      //Como ya se escribio en un marco, se decrementa el numero de marcos necesitados por el proceso
+      pages_needed--; 
+    }  
+    fflush(*swap); // El contenido pendiente del búfer se vacía en el archivo
   }
-  /* Impresión de la tms para verificar que si está ocupada
-  for(int i = 0; i < 5; i++)
-  {
-    mvwprintw(gui->inner_msg, 1, i, "%d ",tms->table[i] );
-
-  }
-  wrefresh(gui->inner_msg);*/
-  // Impresión de la tms para verificar que si está ocupada
-  /*
-  for(int i = 0; i < 2; i++)
-  {
-    mvwprintw(gui->inner_msg, i+1, 0, "%d ",new_pcb->TMP[i]);
-
-  }
-  wrefresh(gui->inner_msg);*/
 }
