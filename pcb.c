@@ -399,6 +399,11 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
 
               // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
               load_to_swap(new_pcb, tms, swap, lines, gui);
+
+              // Se cierra el archivo una vez que se ha cargado en la swap
+              fclose(file);
+              // Se evita puntero colgante
+              new_pcb->program = NULL;
             }
             else { // De lo contrario, inserta el proceso al final de la lista Nuevos
               // Insertar el nuevo proceso en la cola Nuevos
@@ -410,9 +415,14 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           }
           else // La swap no es suficiente para cargar el proceso
           {
-            // Enviar el proceso directamente a terminados, indicando el motivo
-            mvwprintw(gui->inner_msg, 0, 0, "El programa excede el tamaño del SWAP. Actualice el sistema.");
+            // Enviar el proceso directamente a Terminados, indicando el motivo
             enqueue(create_pcb(ready->pid, parameter1, &file, value_par2, tmp_size), finished);
+            mvwprintw(gui->inner_msg, 0, 0, "Proceso: %d [%s] UID: [%d] -> Terminados", new_pcb->pid, new_pcb->file_name, new_pcb->UID);
+            mvwprintw(gui->inner_msg, 1, 0, "El programa excede el tamaño del SWAP. Actualice el sistema.");
+            // Se cierra el archivo dado que no se cargó en la swap
+            fclose(file);
+            // Se evita puntero colgante
+            new_pcb->program = NULL;
           }
         }
         else // Si el archivo no existe
