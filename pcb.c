@@ -128,18 +128,20 @@ void print_history(char buffers[NUMBER_BUFFERS][BUFFER_SIZE], WINDOW *inner_prom
     }
   }
 }
-// Cuenta el número de lineas
+
+// Cuenta el número de lineas igonarando líneas vacías
 int count_lines(FILE *file)
 {
   int lines = 0;
   int c, last = '\n';
   while ((c = fgetc(file)) != EOF)
   {
-    if (c == '\n' && last != '\n')      // 2 saltos de líneas consecutivos indican una línea vacía
+    // Dos saltos de líneas consecutivos indican una línea vacía
+    if (c == '\n' && last != '\n')      
       lines++;
     last = c;
   }
-  rewind(file); // Se regresa el puntero al inicio del archivo para su posterior lectura y escritura en SWAP
+  rewind(file); // Regresa al inicio del archivo
   return lines;
 }
 
@@ -147,7 +149,7 @@ int count_lines(FILE *file)
 // Manejo de comandos ingresados por el usuario en la línea de comandos
 int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
-                     Queue *execution, Queue *ready, Queue *finished,
+                     Queue *execution, Queue *ready, Queue *finished, Queue *new,
                      unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE **swap)
 {
   // Si se presionó una tecla en la terminal (kbhit)
@@ -162,7 +164,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
       // Se le coloca carácter nulo para finalizar la cadena prompt
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
-      exited = evaluate_command(gui, buffers[0], execution, ready, finished, tms, swap);
+      exited = evaluate_command(gui, buffers[0], execution, ready, finished, new, tms, swap);
       // Se crea historial
       for (int i = NUMBER_BUFFERS - 1; i >= 0; i--)
       {
@@ -235,9 +237,6 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
         (*init_timer) += MAX_TIME / ((int)pow(2, *speed_level)); // Se incrementa el temporizador
         (*speed_level)++;                                        // Se incrementa el nivel de velocidad
       }
-      // Se imprime el nivel de velocidad
-      // mvprintw(20, 2, "Nivel velocidad: %d  ", *speed_level);
-      // mvprintw(21, 2, "init_timer: %d     ", *init_timer);
     }
     else if (*c == KEY_LEFT) // Disminuye la velocidad de escritura
     {
@@ -246,9 +245,6 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
         (*init_timer) -= MAX_TIME / ((int)pow(2, *speed_level - 1)); // Se decrementa el temporizador
         (*speed_level)--;                                            // Se decrementa el nivel de velocidad
       }
-      // Se imprime el nivel de velocidad
-      // mvprintw(20, 2, "Nivel velocidad: %d  ", *speed_level);
-      // mvprintw(21, 2, "init_timer: %d     ", *init_timer);
     }
     else if (*c == ESC) // Acceso rápido para salir del programa con ESC
     {
@@ -284,8 +280,8 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
 }
 
 // Evalúa los comandos ingresados por el usuario
-int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, 
-  TMS * tms, FILE **swap)
+int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
+                     TMS *tms, FILE **swap)
 {
   /* TOKENS */
   char command[256] = {0};    // Almacena el comando ingresado
@@ -353,6 +349,9 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
             return 0;
           }
 
+          // Incremento de pid para el siguiente proceso a crear
+          (ready->pid)++;
+
           /*
             Se verifica si el usuario del nuevo proceso ya existe o no (tiene algún proceso en Ejecución o Listos).
             Si no existe el usuario, se incrementa el NumUs.
@@ -382,35 +381,39 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           if (search_process(new_pcb->UID, new_pcb->file_name, *execution) || search_process(new_pcb->UID, new_pcb->file_name, *ready))
           {
             // De haberse encontrado, asignar la misma TMP al nuevo proceso
+
           }
-          else if (tmp_size < tms -> available_pages) // Verificar que el proceso ocupe menos de los marcos disponibles en SWAP (TMS)
+          // Verificar que el proceso sea de menor tamaño que la SWAP
+          else if (lines <= SWAP_SIZE) 
           {
+            // Si la cantidad de marcos libres en SWAP alcanzan para cargar el proceso
+            if (new_pcb->TmpSize <= tms->available_pages) {
+              // Inserta el nodo en la cola Listos despues de verificar las condiciones de SWAP
+              enqueue(new_pcb, ready);
+              // Se imprime mensaje de proceso creado 
+              mvwprintw(gui->inner_msg, 0, 0, "Proceso: %d [%s] UID: [%d]", new_pcb->pid, new_pcb->file_name, new_pcb->UID);
+              mvwprintw(gui->inner_msg, 1, 0, "Creado correctamente.");
 
-            // Se reserva espacio para la tmp del proceso
-            new_pcb->TMP = (int *) malloc(sizeof(int) * tmp_size);
+              // Se reserva espacio para la tmp del proceso
+              new_pcb->TMP = (int *) malloc(sizeof(int) * tmp_size);
 
-            // Carga el proceso en la SWAP
-            load_to_swap(new_pcb, tms, swap, lines, gui);
-
-            //Disminuye la cantidad de marcos disponibles
-            tms->available_pages -= tmp_size;
-
+              // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
+              load_to_swap(new_pcb, tms, swap, lines, gui);
+            }
+            else { // De lo contrario, inserta el proceso al final de la lista Nuevos
+              // Insertar el nuevo proceso en la cola Nuevos
+              enqueue(new_pcb, new);
+              // Se imprime mensaje de proceso creado e insertado en Nuevos
+              mvwprintw(gui->inner_msg, 0, 0, "Proceso: %d [%s] UID: [%d] -> Nuevos", new_pcb->pid, new_pcb->file_name, new_pcb->UID);
+              mvwprintw(gui->inner_msg, 1, 0, "Sin swap disponible");
+            }
           }
           else // La swap no es suficiente para cargar el proceso
           {
-            // Enviar el proceso directamente a terminados, indicando el motivo.
-            mvwprintw(gui->inner_msg, 1, 0, "El programa excede el tamaño del SWAP. Actualice el sistema.");
+            // Enviar el proceso directamente a terminados, indicando el motivo
+            mvwprintw(gui->inner_msg, 0, 0, "El programa excede el tamaño del SWAP. Actualice el sistema.");
             enqueue(create_pcb(ready->pid, parameter1, &file, value_par2, tmp_size), finished);
-            // fclose(file);
-            return 0;
           }
-
-          // Inserta el nodo en la cola Listos despues de verificar las condiciones de SWAP (si es proceso nuevo o no)
-          enqueue(new_pcb, ready);
-          // Mensaje de proceso creado correctamente
-          mvwprintw(gui->inner_msg, 0, 0, "Proceso %d [%s] creado correctamente.", ready->pid, parameter1);
-          // Incremento de pid para el siguiente proceso a crear
-          (ready->pid)++;
         }
         else // Si el archivo no existe
         {
@@ -475,7 +478,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
              se vea que el proceso está en la cola Finalizados */
           if (!ready->head)
           {
-            print_queues(gui->inner_queues, *execution, *ready, *finished);
+            print_queues(gui->inner_queues, *execution, *ready, *finished, *new);
           }
         }
         else if ((pcb_extracted = extract_by_pid(pid_to_search, ready))) // El pcb se encontró en la cola de Listos
@@ -519,7 +522,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
       mvwprintw(gui->inner_msg, 1, 0, "Sintaxis: KILL «índice»");
     }
   }
-  else // Si el comando no es EXIT
+  else // Si no es un comando válido
   {
     mvwprintw(gui->inner_msg, 0, 0, "Error: comando \"%s\" no encontrado.", command); // Comando no encontrado
   }

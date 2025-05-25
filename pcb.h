@@ -52,6 +52,7 @@ typedef struct pcb
   int KCPU;   // Uso de CPU por proceso
   int KCPUxU; // Uso de CPU por usuario
 
+  // Parámetros de la memoria
   int TmpSize; // Tamaño de la TMP (cantidad de marcos del proceso)
   int *TMP;    // Tabla de mapa/marcos de proceso
 } PCB;
@@ -79,10 +80,10 @@ int count_lines(FILE *file);
 // FUNCIONES PRINCIPALES
 int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
-                     Queue *execution, Queue *ready, Queue *finished,
+                     Queue *execution, Queue *ready, Queue *finished, Queue *new,
                      unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE ** swap);
 
-int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, 
+int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
                      TMS * tms, FILE **swap);
 
 int read_line(FILE **program, char *line);

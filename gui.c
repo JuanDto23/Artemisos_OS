@@ -23,6 +23,15 @@ void initialize_gui(GUI *gui)
   // Información general
   gui->ginfo = newwin(HEIGHT_GINFO, WIDTH_GINFO, STARTY_GINFO, STARTX_GINFO);
   gui->inner_ginfo = derwin(gui->ginfo, HEIGHT_GINFO - 2, WIDTH_GINFO - 2, 1, 1);
+  // SWAP
+  gui->swap = newwin(HEIGHT_SWAP, WIDTH_SWAP, STARTY_SWAP, STARTX_SWAP);
+  gui->inner_swap = derwin(gui->swap, HEIGHT_SWAP - 2, WIDTH_SWAP - 2, 1, 1);
+  // TMS
+  gui->tms = newwin(HEIGHT_TMS, WIDTH_TMS, STARTY_TMS, STARTX_TMS);
+  gui->inner_tms = derwin(gui->tms, HEIGHT_TMS - 2, WIDTH_TMS - 2, 1, 1);
+  // TMP
+  gui->tmp = newwin(HEIGHT_TMP, WIDTH_TMP, STARTY_TMP, STARTX_TMP);
+  gui->inner_tmp = derwin(gui->tmp, HEIGHT_TMP - 2, WIDTH_TMP - 2, 1, 1);
 
   // Dibujar bordes de ventanas con caracteres "bonitos" (0,0)
   box(gui->prompt, 0, 0);
@@ -30,12 +39,18 @@ void initialize_gui(GUI *gui)
   box(gui->msg, 0, 0);
   box(gui->queues, 0, 0);
   box(gui->ginfo, 0, 0);
+  box(gui->swap, 0, 0);
+  box(gui->tms, 0, 0);
+  box(gui->tmp, 0, 0);
 
   // Escribir títulos en las cajas de PROMPT, CPU, Mensajes e Información General
   // Línea 0 es el borde superior
   mvwprintw(gui->prompt, 0, (WIDTH_PROMPT - strlen("PROMPT")) / 2, "%s", "PROMPT");
   mvwprintw(gui->cpu, 0, (WIDTH_CPU - strlen("PROCESADOR")) / 2, "%s", "PROCESADOR");
   mvwprintw(gui->msg, 0, (WIDTH_MSG - strlen("MENSAJES")) / 2, "%s", "MENSAJES");
+  mvwprintw(gui->swap, 0, (WIDTH_SWAP - strlen("SWAP")) / 2, "%s", "SWAP");
+  mvwprintw(gui->tms, 0, (WIDTH_TMS - strlen("TMS")) / 2, "%s", "TMS");
+  mvwprintw(gui->tmp, 0, (WIDTH_TMP - strlen("TMP")) / 2, "%s", "TMP");
   // Ventana de Colas no lleva título
   mvwprintw(gui->ginfo, 0, (WIDTH_GINFO - strlen("INFO GENERAL")) / 2, "%s", "INFO GENERAL");
 
@@ -45,6 +60,9 @@ void initialize_gui(GUI *gui)
   wrefresh(gui->msg);
   wrefresh(gui->queues);
   wrefresh(gui->ginfo);
+  wrefresh(gui->swap);
+  wrefresh(gui->tms);
+  wrefresh(gui->tmp);
 }
 
 // Se imprime prompt con colores
@@ -96,7 +114,7 @@ void print_processor(WINDOW *inner_cpu, PCB pcb)
 }
 
 // Imprime los procesos de las colas
-void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue finished)
+void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue finished, Queue new)
 {
   // Se limpia la subventana de las Colas
   werase(inner_queues);
@@ -109,7 +127,7 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue fini
     // ACS_HLINE: caracter de línea horizontal "bonita"
     mvwaddch(inner_queues, row, i, ACS_HLINE);
   }
-  mvwprintw(inner_queues, row, (WIDTH_QUEUES - strlen("EJECUCION")) / 2, "%s", "EJECUCION");
+  mvwprintw(inner_queues, row, (WIDTH_QUEUES - strlen("EJECUCION")) / 2, "%s[%d]", "EJECUCION", execution.elements);
   for (++row; execution.head != NULL; row++)
   {
     mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",
@@ -124,7 +142,7 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue fini
     // ACS_HLINE: caracter de línea horizontal "bonita"
     mvwaddch(inner_queues, row, i, ACS_HLINE);
   }
-  mvwprintw(inner_queues, row, (WIDTH_QUEUES - strlen("LISTOS")) / 2, "%s", "LISTOS");
+  mvwprintw(inner_queues, row, (WIDTH_QUEUES - strlen("LISTOS")) / 2, "%s[%d]", "LISTOS", ready.elements);
   for (++row; ready.head != NULL; row++)
   {
     mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",
@@ -133,13 +151,28 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue fini
     ready.head = ready.head->next;
   }
 
+  // SECCIÓN NUEVOS
+  for (int i = 0; i < WIDTH_QUEUES; i++)
+  {
+    // ACS_HLINE: caracter de línea horizontal "bonita"
+    mvwaddch(inner_queues, row, i, ACS_HLINE);
+  }
+  mvwprintw(inner_queues, row, (WIDTH_QUEUES - strlen("NUEVOS")) / 2, "%s[%d]", "NUEVOS", new.elements);
+  for (++row; new.head != NULL; row++)
+  {
+    mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",
+              new.head->pid, new.head->UID, new.head->P, new.head->KCPU, new.head->KCPUxU, new.head->file_name, new.head->AX, new.head->BX,
+              new.head->CX, new.head->DX, new.head->PC, new.head->IR);
+    new.head = new.head->next;
+  }
+
   // SECCIÓN TERMINADOS
   for (int i = 0; i < WIDTH_QUEUES; i++)
   {
     // ACS_HLINE: caracter de línea horizontal "bonita"
     mvwaddch(inner_queues, row, i, ACS_HLINE);
   }
-  mvwprintw(inner_queues, row, (WIDTH_QUEUES - strlen("TERMINADOS")) / 2, "%s", "TERMINADOS");
+  mvwprintw(inner_queues, row, (WIDTH_QUEUES - strlen("TERMINADOS")) / 2, "%s[%d]", "TERMINADOS", finished.elements);
   for (++row; finished.head != NULL; row++)
   {
     mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",

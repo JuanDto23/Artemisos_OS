@@ -29,13 +29,31 @@ typedef struct queue Queue;
 #define STARTX_QUEUES 86
 #define STARTY_QUEUES 3
 #define WIDTH_QUEUES 120
-#define HEIGHT_QUEUES 31
+#define HEIGHT_QUEUES 16
 
 // INFORMACIÓN GENERAL
 #define STARTX_GINFO 86
 #define STARTY_GINFO 0
 #define WIDTH_GINFO 120
 #define HEIGHT_GINFO 3
+
+// SWAP
+#define STARTX_SWAP 86
+#define STARTY_SWAP 19
+#define WIDTH_SWAP 120
+#define HEIGHT_SWAP 19
+
+// TMS
+#define STARTX_TMS 2
+#define STARTY_TMS 19
+#define WIDTH_TMS 11
+#define HEIGHT_TMS 19
+
+// TMP
+#define STARTX_TMP 16
+#define STARTY_TMP 19
+#define WIDTH_TMP 27
+#define HEIGHT_TMP 8
 
 // Estructura de la GUI. «inner» significa que es una subventana
 typedef struct gui
@@ -50,12 +68,20 @@ typedef struct gui
   WINDOW *inner_queues;
   WINDOW *ginfo;
   WINDOW *inner_ginfo;
+  WINDOW *swap;
+  WINDOW *inner_swap;
+  WINDOW *tms;
+  WINDOW *inner_tms;
+  WINDOW *tmp;
+  WINDOW *inner_tmp;
+  WINDOW *keys;
+  WINDOW *inner_keys;
 }GUI;
 
 void initialize_gui(GUI *gui);
 void print_prompt(WINDOW *inner_prompt, int row);
 void print_processor(WINDOW *inner_cpu, PCB pcb);
-void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue finished);
+void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue finished, Queue new);
 void print_ginfo(WINDOW *inner_ginfo, Queue execution);
 void empty_processor(WINDOW *inner_cpu);
 void clear_prompt(WINDOW *inner_prompt, int row);

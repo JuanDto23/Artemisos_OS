@@ -24,7 +24,7 @@ int main(void)
   unsigned init_timer = 0;                         // Inicializador para timer, reduce la brecha entre MAX_TIME
   int minor_priority = 0;                          // Variable para saber que nodo extraer de ready para mandarlo a ejecución
   FILE *swap = NULL;                               // Bloque contiguo de almacenamiento binario en disco duro
-  TMS tms;                                         // Estructura con: Arreglo de enteros para marcar el estado de los marcoos de la SWAP (disponible/ocupado) y número de marcos disponibles
+  TMS tms;                                         // Estructura con: Arreglo de enteros para marcar el estado de los marcos de la SWAP (disponible/ocupado) y número de marcos disponibles
 
   // Se crean instancias de las colas
   Queue execution;
@@ -41,25 +41,25 @@ int main(void)
   // Se crea instancia de la GUI
   GUI gui;
 
-  initscr();                      // Inicia la ventana
-  start_color();                  // Permite el uso de colores
-  use_default_colors();           // Permite usar -1 como fondo transparente
-  noecho();                       // Evita la impresión automática de caracteres
-  set_escdelay(10);               // Proporciona el tiempo de expiración del ESC en milisegundos
-  initialize_gui(&gui);           // Inicializar GUI
-  keypad(gui.inner_prompt, TRUE); // Habilita las teclas especiales después de inicializar la GUI
-  empty_processor(gui.inner_cpu); // Se imprime el contenido del CPU inicialmente vacío
-  print_queues(gui.inner_queues, execution, ready, finished);
-  print_prompt(gui.inner_prompt, 0); // Se imprime prompt en fila 0
-  swap = create_swap();              // Crear un archivo lleno de ceros al inicio del programa (SWAP)
-  initialize_tms(&tms);   // Inicializar tabla TMS (arreglo en ceros y páginas máximas)
+  initscr();                                                       // Inicia la ventana
+  start_color();                                                   // Permite el uso de colores
+  use_default_colors();                                            // Permite usar -1 como fondo transparente
+  noecho();                                                        // Evita la impresión automática de caracteres
+  set_escdelay(10);                                                // Proporciona el tiempo de expiración del ESC en milisegundos
+  initialize_gui(&gui);                                            // Inicializar GUI
+  keypad(gui.inner_prompt, TRUE);                                  // Habilita las teclas especiales después de inicializar la GUI
+  empty_processor(gui.inner_cpu);                                  // Se imprime el contenido del CPU inicialmente vacío
+  print_queues(gui.inner_queues, execution, ready, finished, new); // Se imprimen las colas en su ventana
+  print_prompt(gui.inner_prompt, 0);                               // Se imprime prompt en fila 0
+  swap = create_swap();                                            // Crear un archivo lleno de ceros al inicio del programa (SWAP)
+  initialize_tms(&tms);                                            // Inicializar tabla TMS (arreglo en ceros y páginas máximas)
   do
   {
     if (!execution.head) // Si la cola Ejecución está vacía
     {
       // Gestor de comandos de terminal
       exited = command_handling(&gui, buffers, &c, &index, &index_history,
-                                &execution, &ready, &finished,
+                                &execution, &ready, &finished, &new,
                                 &timer, &init_timer, &speed_level, &tms, &swap);
       if (ready.head) // Verifica si hay nodos en la cola Listos
       {
@@ -75,7 +75,7 @@ int main(void)
       {
         // Gestor de comandos de terminal
         exited = command_handling(&gui, buffers, &c, &index, &index_history,
-                                  &execution, &ready, &finished,
+                                  &execution, &ready, &finished, &new,
                                   &timer, &init_timer, &speed_level, &tms, &swap);
       }
       else // Si se alcanzó el MAX_TIME se ejecuta la instrucción
@@ -184,7 +184,7 @@ int main(void)
               // Actualiza los parámetros de planificación, para todos los nodos de la cola Listos
               update_parameters(&ready);
               // Mostrar el proceso extraído de Ejecución por 3 segundos
-              print_queues(gui.inner_queues, execution, ready, finished);
+              print_queues(gui.inner_queues, execution, ready, finished, new);
               sleep(3);
               // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad y se extrae
               minor_priority = get_minor_priority(ready);
@@ -195,14 +195,15 @@ int main(void)
             quantum = 0;
           }
         }
-        timer = init_timer;                                         // Se reinicia temporizador para volver a escribir en línea de comandos
-        print_ginfo(gui.inner_ginfo, execution);                    // Se imprime información general
-        print_queues(gui.inner_queues, execution, ready, finished); // Se imprimen las colas en su ventana
+        timer = init_timer;                                              // Se reinicia temporizador para volver a escribir en línea de comandos
+        print_ginfo(gui.inner_ginfo, execution);                         // Se imprime información general
+        print_queues(gui.inner_queues, execution, ready, finished, new); // Se imprimen las colas en su ventana
       }
     }
     wmove(gui.inner_prompt, 0, PROMPT_START + index); // Se coloca el cursor en su lugar
     wrefresh(gui.inner_prompt);                       // Refresca las ventana de inner_prompt
   } while (!exited);
+  fclose(swap); // Se cierra swap hasta el final de la ejecución del simulador
   endwin();     // Cierra la ventana
   printf("\n"); // Salto de línea en terminal
   return 0;

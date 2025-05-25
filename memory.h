@@ -9,10 +9,13 @@ typedef struct gui GUI;
 #define MAX_PAGES 4096
 #define PAGE_SIZE 16
 #define INSTRUCTION_SIZE 32
-#define TOTAL_INSTRUCTIONS 65536
+#define SWAP_SIZE 65536
+
+// Se definen los offsets para el acceso a la memoria
 #define PAGE_JUMP 0x200
+#define INSTRUCTION_JUMP 0x20
 
-
+// Definición de la tabla de memoria swap (TMS)
 typedef struct tms {
   int table[MAX_PAGES];
   int available_pages;
