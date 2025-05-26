@@ -151,7 +151,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished, Queue *new,
                      unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE **swap,
-                     int *swap_disp)
+                     int *swap_disp, int *tms_disp, int * tmp_disp)
 {
   // Si se presionó una tecla en la terminal (kbhit)
   if (kbhit())
@@ -165,7 +165,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
       // Se le coloca carácter nulo para finalizar la cadena prompt
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
-      exited = evaluate_command(gui, buffers[0], execution, ready, finished, new, tms, swap, swap_disp);
+      exited = evaluate_command(gui, buffers[0], execution, ready, finished, new, tms, swap, swap_disp, tmp_disp);
       // Se crea historial
       for (int i = NUMBER_BUFFERS - 1; i >= 0; i--)
       {
@@ -247,10 +247,22 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
         (*speed_level)++;                                        // Se incrementa el nivel de velocidad
       }
     }
-    else if (*c == KEY_PPAGE) // Retrocede TMS (PgUp)
-    {}
-    else if (*c == KEY_NPAGE) // Avanza TMS (PgDn)
-    {}
+    else if (*c == KEY_F(5)) // Retrocede TMS (PgUp)
+    {
+      if((*tms_disp) > 0)
+      {
+        (*tms_disp)--;
+      }
+      print_tms(gui -> inner_tms, *tms, *tms_disp);
+    }
+    else if (*c == KEY_F(6)) // Avanza TMS (PgDn)
+    {
+      if((*tms_disp) < TOTAL_DISP_TMS)
+      {
+        (*tms_disp)++;
+      }
+      print_tms(gui -> inner_tms, *tms, *tms_disp);
+    }
     else if (*c == KEY_IC) // Retrocede TMP (ins)
     {}
     else if (*c == KEY_DC) // Avanza TMP (supr)
@@ -305,7 +317,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
 
 // Evalúa los comandos ingresados por el usuario
 int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     TMS *tms, FILE **swap, int *swap_disp)
+                     TMS *tms, FILE **swap, int *swap_disp, int * tmp_disp)
 {
   /* TOKENS */
   char command[256] = {0};    // Almacena el comando ingresado
@@ -317,6 +329,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
   int tmp_size = 0;           // Almacena el número de marcos del archivo a cargar
   int lines = 0;              // Almacena el número de líneas del archivo a cargar
   int KCPUxU = 0;             // Almacena el valor de KCPUxU del usuario
+  int pid_brother_process = 0;// Almacena el pid del proceso que ya tiene el mismo archivo cargado en SWAP
 
   // Se separa en tokens el comando leído de prompt
   sscanf(buffer, "%s %s %s", command, parameter1, parameter2); // Que pasa si como segundo parámetro es una a?
@@ -399,15 +412,24 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           // Se actualiza el peso W una vez creado el nuevo proceso y actualizado el NumUs
           if (NumUs) W = 1.0 / NumUs;
 
-          /*
-            Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso
+          /* Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso
             del mismo usuario. Ya sea en Listos o en Ejecución */
-          if (search_process(new_pcb->UID, new_pcb->file_name, *execution) || search_process(new_pcb->UID, new_pcb->file_name, *ready))
+          if ( (pid_brother_process = search_process(new_pcb->UID, new_pcb->file_name, *execution)) )
           {
-            // De haberse encontrado, asignar la misma TMP al nuevo proceso
+            // De haberse encontrado en ejecución, asignar la misma TMP al nuevo proceso
+            //mvwprintw(gui->inner_msg, 1, 0, "Proceso hermano: %d", pid_brother_process);
+            set_same_tmp(*execution, new_pcb, pid_brother_process);
 
           }
-          // Verificar que el proceso sea de menor tamaño que la SWAP
+          else if( (pid_brother_process= search_process(new_pcb->UID, new_pcb->file_name, *ready)))
+          {
+            // De haberse encontrado en ready, asignar la misma TMP al nuevo proceso
+            //mvwprintw(gui->inner_msg, 1, 0, "Proceso hermano: %d", pid_brother_process);
+            set_same_tmp(*ready, new_pcb, pid_brother_process);
+          }
+          
+          // Flujo de acción para procesos sin hermanos
+          //Verificar que el proceso sea de menor tamaño que la SWAP
           else if (lines <= SWAP_SIZE) 
           {
             // Si la cantidad de marcos libres en SWAP alcanzan para cargar el proceso
@@ -420,6 +442,8 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
 
               // Se reserva espacio para la tmp del proceso
               new_pcb->TMP = (int *) malloc(sizeof(int) * tmp_size);
+              // Se imprime la tmp del proceso creado
+              print_tmp(gui->inner_tmp, *new_pcb, *tmp_disp);
 
               // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
               load_to_swap(new_pcb, tms, swap, lines, gui);
@@ -429,7 +453,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
               // Se evita puntero colgante
               new_pcb->program = NULL;
             }
-            else { // De lo contrario, inserta el proceso al final de la lista Nuevos
+            else { // De lo contrario, inserta el proceso al final de la lista Nuevos (puede entrar después)
               // Insertar el nuevo proceso en la cola Nuevos
               enqueue(new_pcb, new);
               // Se imprime mensaje de proceso creado e insertado en Nuevos

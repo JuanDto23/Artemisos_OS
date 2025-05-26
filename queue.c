@@ -324,6 +324,7 @@ int get_KCPUxU(int uid, Queue queue)
 }
 
 // Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso del mismo usuario.
+// De ser así se regresa el pid del primer proceso hermano para asignarle su misma TMP
 int search_process(int uid, char *filename, Queue queue)
 {
   PCB *current = NULL;
@@ -342,7 +343,31 @@ int search_process(int uid, char *filename, Queue queue)
   }
   if (current)
   {
-    return TRUE; // Se encontró el archivo en la cola
+    return current->pid; // Se encontró el archivo en la cola
   }
   return FALSE; // La cola está vacía o no se encontró el archivo
+}
+
+// Asgina la misma tmp al proceso hermano identificado por su pid
+void set_same_tmp(Queue queue, PCB * pcb, int pid_brother_process)
+{
+  PCB *current = NULL;
+  int found = FALSE;
+
+  current = queue.head;
+  while (current && !found)
+  {
+    // Se comprueba que el archivo y el id usuario coincidan con el dueño del nodo actual
+    found = (current->UID == pid_brother_process);
+    if (!found)
+    {
+      // Se avanza al siguiente nodo de la lista
+      current = current->next;
+    }
+  }
+  if (current)
+  {
+    // Se asigna la misma TMP del proceso hermano encontrado
+    pcb -> TMP = current -> TMP;
+  }
 }

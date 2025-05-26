@@ -13,6 +13,7 @@ typedef struct gui GUI;
 
 // Parámetros de desplazamientos
 #define TOTAL_DISP_SWAP 682
+#define TOTAL_DISP_TMS 255
 
 // Se definen los offsets para el acceso a la memoria
 #define PAGE_JUMP 0x200

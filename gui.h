@@ -47,13 +47,13 @@ typedef struct tms TMS;
 // TMS
 #define STARTX_TMS 2
 #define STARTY_TMS 19
-#define WIDTH_TMS 11
+#define WIDTH_TMS 12
 #define HEIGHT_TMS 19
 
 // TMP
 #define STARTX_TMP 16
 #define STARTY_TMP 19
-#define WIDTH_TMP 27
+#define WIDTH_TMP 16
 #define HEIGHT_TMP 8
 
 // KEYS
@@ -92,7 +92,7 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue fini
 void print_ginfo(WINDOW *inner_ginfo, Queue execution);
 void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp);
 void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp);
-void print_tmp(WINDOW *inner_tmp, int *TMP, int tmp_disp);
+void print_tmp(WINDOW *inner_tmp, PCB pcb, int tmp_disp);
 void empty_processor(WINDOW *inner_cpu);
 void clear_prompt(WINDOW *inner_prompt, int row);
 

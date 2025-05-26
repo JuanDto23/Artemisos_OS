@@ -57,6 +57,7 @@ int main(void)
   print_prompt(gui.inner_prompt, 0);                               // Se imprime prompt en fila 0
   swap = create_swap();                                            // Crear un archivo lleno de ceros al inicio del programa (SWAP)
   print_swap(gui.inner_swap, swap, swap_disp);
+  print_tms(gui.inner_tms, tms, tms_disp);
   initialize_tms(&tms);                                            // Inicializar tabla TMS (arreglo en ceros y páginas máximas)
   do
   {
@@ -65,7 +66,7 @@ int main(void)
       // Gestor de comandos de terminal
       exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                 &execution, &ready, &finished, &new,
-                                &timer, &init_timer, &speed_level, &tms, &swap, &swap_disp);
+                                &timer, &init_timer, &speed_level, &tms, &swap, &swap_disp, &tms_disp, &tmp_disp);
       if (ready.head) // Verifica si hay nodos en la cola Listos
       {
         // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
@@ -81,7 +82,7 @@ int main(void)
         // Gestor de comandos de terminal
         exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                   &execution, &ready, &finished, &new,
-                                  &timer, &init_timer, &speed_level, &tms, &swap, &swap_disp);
+                                  &timer, &init_timer, &speed_level, &tms, &swap, &swap_disp, &tms_disp, &tmp_disp);
       }
       else // Si se alcanzó el MAX_TIME se ejecuta la instrucción
       {

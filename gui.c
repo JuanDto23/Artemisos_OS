@@ -236,7 +236,7 @@ void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp)
     // Recorrer instrucciones (renglones)
     for(int instruction = 0; instruction < PAGE_SIZE; instruction++) { 
       fread(buffer, sizeof(char), INSTRUCTION_SIZE, swap); 
-      mvwprintw(inner_swap, instruction + 1, ((page + 1)*WIDTH_SWAP / 6) - 20, "[%04X] %s", (swap_disp*instructions_per_disp + page*PAGE_SIZE) | instruction, buffer); //Imprime las direcciones guardadas en la SWAP junto con su direccion
+      mvwprintw(inner_swap, instruction + 1, ((page + 1)*WIDTH_SWAP / 6) - 20, "[%04X] %s", (swap_disp*instructions_per_disp + page*PAGE_SIZE) | instruction, buffer); //Imprime las instrucciones guardadas en la SWAP junto con su direccion
     }
   }
   // Refresca subventana de swap
@@ -246,11 +246,49 @@ void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp)
 // Imprime el contenido de la TMS con desplazamiento
 void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp)
 {
+  // Se limpia la subventana de la TMS
+  werase(inner_tms);
+
+  // Muestra el mensaje de marco vs PID
+  mvwprintw(inner_tms,0, 0/*(WIDTH_TMS - strlen("Marco-PID"))/2*/, "Marco-PID" );
+
+  int total_displayed_pages = HEIGHT_TMS - 3; // Se restan los bordes de la ventana tms y la impresión de información 
+  // Se localiza el índice de la tabla tms según el número de desplazamiento (0-255)
+  int tms_index = 0;
+  if(tms_disp)
+    tms_index = tms_disp * total_displayed_pages; // tms_dips = 0 (0 - 15), tms_disp = 1 (16 - 31)
+
+  for(int page = 0; page < total_displayed_pages; page++)
+  {
+    mvwprintw(inner_tms, (page + 1), 0, "%03X - %d",tms_index, tms.table[tms_index]);
+    tms_index++;
+  }
+  // Refresca la subventana de tms
+  wrefresh(inner_tms);
 }
 
 // Imprime el contenido de la TMP con desplazamiento
-void print_tmp(WINDOW *inner_tmp, int *TMP, int tmp_disp)
+void print_tmp(WINDOW *inner_tmp, PCB pcb, int tmp_disp)
 {
+    // Se limpia la subventana de la TMS
+  werase(inner_tmp);
+
+  // Muestra el mensaje de marco vs PID
+  mvwprintw(inner_tmp,0, (WIDTH_TMP - strlen("Mrc  EnSWAP"))/2,"Mrc  EnSWAP" );
+
+  int total_displayed_adresses = HEIGHT_TMP - 3; // Se restan los bordes de la ventana tmp y la impresión de información 
+  // Se localiza el índice de la tabla tmsp según el número de desplazamiento
+  int tmp_index = 0;
+  if(tmp_disp)
+    tmp_index = tmp_disp * total_displayed_adresses;
+
+  for(int adress = 0; adress <  pcb.TmpSize && adress < total_displayed_adresses; adress++)
+  {
+    mvwprintw(inner_tmp, (adress + 1), (WIDTH_TMP - strlen("Mrc  EnSWAP"))/2, "%03X - %03x",tmp_index, pcb.TMP[tmp_index]);
+    tmp_index++;
+  }
+  // Refresca la subventana de tms
+  wrefresh(inner_tmp);
 }
 
 // Se imprime el procesador vacío

@@ -27,4 +27,5 @@ void update_KCPUxU_per_process(int uid, Queue *queue);
 void update_parameters(Queue *queue);
 int get_KCPUxU(int uid, Queue queue);
 int search_process(int uid, char *filename, Queue queue);
+void set_same_tmp(Queue queue, PCB * pcb, int pid_brother_process);
 #endif
