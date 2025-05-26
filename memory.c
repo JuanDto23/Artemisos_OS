@@ -12,8 +12,8 @@
    para el manejo de memoria de intercambio (swap) */
 FILE *create_swap(void)
 {
-  // Crear el archivo binario SWAP
-  FILE *swap = fopen("SWAP", "wb");
+  // Crear el archivo binario SWAP en modo lectura/escritura binaria
+  FILE *swap = fopen("SWAP", "w+b");
   if (!swap)
   {
     endwin();

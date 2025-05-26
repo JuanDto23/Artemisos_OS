@@ -150,7 +150,8 @@ int count_lines(FILE *file)
 int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE **swap)
+                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE **swap,
+                     int *swap_disp)
 {
   // Si se presionó una tecla en la terminal (kbhit)
   if (kbhit())
@@ -164,7 +165,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
       // Se le coloca carácter nulo para finalizar la cadena prompt
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
-      exited = evaluate_command(gui, buffers[0], execution, ready, finished, new, tms, swap);
+      exited = evaluate_command(gui, buffers[0], execution, ready, finished, new, tms, swap, swap_disp);
       // Se crea historial
       for (int i = NUMBER_BUFFERS - 1; i >= 0; i--)
       {
@@ -230,6 +231,14 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
         wmove(gui->inner_prompt, 0, PROMPT_START + *index);
       }
     }
+    else if (*c == KEY_LEFT) // Disminuye la velocidad de escritura
+    {
+      if (*speed_level > 1) // Que sea mayor que el nivel 1 de velocidad
+      {
+        (*init_timer) -= MAX_TIME / ((int)pow(2, *speed_level - 1)); // Se decrementa el temporizador
+        (*speed_level)--;                                            // Se decrementa el nivel de velocidad
+      }
+    }
     else if (*c == KEY_RIGHT) // Aumenta la velocidad de escritura
     {
       if (*speed_level < MAX_LEVEL) // Que no sobrepase el límite máximo de niveles
@@ -238,13 +247,28 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
         (*speed_level)++;                                        // Se incrementa el nivel de velocidad
       }
     }
-    else if (*c == KEY_LEFT) // Disminuye la velocidad de escritura
+    else if (*c == KEY_PPAGE) // Retrocede TMS (PgUp)
+    {}
+    else if (*c == KEY_NPAGE) // Avanza TMS (PgDn)
+    {}
+    else if (*c == KEY_IC) // Retrocede TMP (ins)
+    {}
+    else if (*c == KEY_DC) // Avanza TMP (supr)
+    {}
+    else if (*c == KEY_F(7)) // Retrocede SWAP (F7)
     {
-      if (*speed_level > 1) // Que sea mayor que el nivel 1 de velocidad
-      {
-        (*init_timer) -= MAX_TIME / ((int)pow(2, *speed_level - 1)); // Se decrementa el temporizador
-        (*speed_level)--;                                            // Se decrementa el nivel de velocidad
+      if((*swap_disp) > 0){
+        (*swap_disp)--;
       }
+      print_swap(gui->inner_swap, *swap, *swap_disp);
+    }
+    else if (*c == KEY_F(8)) // Avanza SWAP (F8)
+    {
+      if((*swap_disp) < TOTAL_DISP_SWAP){
+        (*swap_disp)++;
+      }
+      print_swap(gui->inner_swap, *swap, *swap_disp);
+      
     }
     else if (*c == ESC) // Acceso rápido para salir del programa con ESC
     {
@@ -281,7 +305,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
 
 // Evalúa los comandos ingresados por el usuario
 int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     TMS *tms, FILE **swap)
+                     TMS *tms, FILE **swap, int *swap_disp)
 {
   /* TOKENS */
   char command[256] = {0};    // Almacena el comando ingresado
@@ -399,7 +423,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
 
               // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
               load_to_swap(new_pcb, tms, swap, lines, gui);
-
+              
               // Se cierra el archivo una vez que se ha cargado en la swap
               fclose(file);
               // Se evita puntero colgante
@@ -424,6 +448,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
             // Se evita puntero colgante
             new_pcb->program = NULL;
           }
+          print_swap(gui->inner_swap, *swap, *swap_disp);
         }
         else // Si el archivo no existe
         {

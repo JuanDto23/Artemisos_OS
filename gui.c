@@ -32,6 +32,9 @@ void initialize_gui(GUI *gui)
   // TMP
   gui->tmp = newwin(HEIGHT_TMP, WIDTH_TMP, STARTY_TMP, STARTX_TMP);
   gui->inner_tmp = derwin(gui->tmp, HEIGHT_TMP - 2, WIDTH_TMP - 2, 1, 1);
+  // KEYS
+  gui->keys = newwin(HEIGHT_KEYS, WIDTH_KEYS, STARTY_KEYS, STARTX_KEYS);
+  gui->inner_keys = derwin(gui->keys, HEIGHT_KEYS - 2, WIDTH_KEYS - 2, 1, 1);
 
   // Dibujar bordes de ventanas con caracteres "bonitos" (0,0)
   box(gui->prompt, 0, 0);
@@ -42,17 +45,22 @@ void initialize_gui(GUI *gui)
   box(gui->swap, 0, 0);
   box(gui->tms, 0, 0);
   box(gui->tmp, 0, 0);
+  box(gui->keys, 0, 0);
 
   // Escribir títulos en las cajas de PROMPT, CPU, Mensajes e Información General
   // Línea 0 es el borde superior
   mvwprintw(gui->prompt, 0, (WIDTH_PROMPT - strlen("PROMPT")) / 2, "%s", "PROMPT");
   mvwprintw(gui->cpu, 0, (WIDTH_CPU - strlen("PROCESADOR")) / 2, "%s", "PROCESADOR");
   mvwprintw(gui->msg, 0, (WIDTH_MSG - strlen("MENSAJES")) / 2, "%s", "MENSAJES");
+  mvwprintw(gui->ginfo, 0, (WIDTH_GINFO - strlen("INFO GENERAL")) / 2, "%s", "INFO GENERAL");
   mvwprintw(gui->swap, 0, (WIDTH_SWAP - strlen("SWAP")) / 2, "%s", "SWAP");
   mvwprintw(gui->tms, 0, (WIDTH_TMS - strlen("TMS")) / 2, "%s", "TMS");
   mvwprintw(gui->tmp, 0, (WIDTH_TMP - strlen("TMP")) / 2, "%s", "TMP");
-  // Ventana de Colas no lleva título
-  mvwprintw(gui->ginfo, 0, (WIDTH_GINFO - strlen("INFO GENERAL")) / 2, "%s", "INFO GENERAL");
+  mvwprintw(gui->keys, 0, (WIDTH_KEYS - strlen("TECLAS ESPECIALES")) / 2, "%s", "TECLAS ESPECIALES");
+
+  // Escribir línea estática en las ventanas de TMS, KEYS
+  mvwprintw(gui->inner_tms, 0, 0, "Marco-PID");
+  mvwprintw(gui->inner_keys, 0, 0, "[Up][Down]:History  [Left][Right]:Speed  [PgUp][PgDwn]:TMS  [Ins][Supr]:TMP  [F5][F6]:RAM  [F7][F8]:SWAP  [Alt-][Alt+]:Lists");
 
   // Refrescar ventanas
   wrefresh(gui->prompt);
@@ -63,6 +71,7 @@ void initialize_gui(GUI *gui)
   wrefresh(gui->swap);
   wrefresh(gui->tms);
   wrefresh(gui->tmp);
+  wrefresh(gui->keys);
 }
 
 // Se imprime prompt con colores
@@ -202,6 +211,46 @@ void print_ginfo(WINDOW *inner_ginfo, Queue execution)
   mvwprintw(inner_ginfo, 0, WIDTH_GINFO - 25, "W:[%.2f]", W);
   // Se refresca la subventana de Información General
   wrefresh(inner_ginfo);
+}
+
+// Imprime el contenido de la SWAP con desplazamiento
+void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp)
+{
+  // Se limpia la subventana de Información General de la SWAP
+  werase(inner_swap);
+  
+  // Muestra información general fija de la SWAP
+  mvwprintw(inner_swap, 0, (WIDTH_SWAP - strlen("[65536] Inst en [4096] Marcos de [16] Inst de [32] Bytes c/u = [2097152] Bytes")) / 2, "[65536] Inst en [4096] Marcos de [16] Inst de [32] Bytes c/u = [2097152] Bytes");
+
+  int displayed_pages = 6; // Páginas desplegadas por desplazamiento
+  int instructions_per_disp = PAGE_SIZE * displayed_pages; // Instrucciones que llenan toda una ventana de SWAP
+  char buffer[INSTRUCTION_SIZE] = {0}; // Buffer que almacena instrucción leída desde archivo SWAP
+  
+  // Posiciona el puntero de SWAP en la primera instrucción del marco n, en función del desplazamiento swap_disp
+  fseek(swap, instructions_per_disp * INSTRUCTION_JUMP * swap_disp, SEEK_SET);
+  
+  // Imprime las instrucciones de los 6 marcos conforme al desplazamiento
+  for (int page = 0; page < displayed_pages; page++) { // Recorrer paginas (columnas)
+    // Evita imprimir mas marcos de los especificados
+    if(swap_disp == TOTAL_DISP_SWAP && page == 4) break; 
+    // Recorrer instrucciones (renglones)
+    for(int instruction = 0; instruction < PAGE_SIZE; instruction++) { 
+      fread(buffer, sizeof(char), INSTRUCTION_SIZE, swap); 
+      mvwprintw(inner_swap, instruction + 1, ((page + 1)*WIDTH_SWAP / 6) - 20, "[%04X] %s", (swap_disp*instructions_per_disp + page*PAGE_SIZE) | instruction, buffer); //Imprime las direcciones guardadas en la SWAP junto con su direccion
+    }
+  }
+  // Refresca subventana de swap
+  wrefresh(inner_swap);
+}
+
+// Imprime el contenido de la TMS con desplazamiento
+void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp)
+{
+}
+
+// Imprime el contenido de la TMP con desplazamiento
+void print_tmp(WINDOW *inner_tmp, int *TMP, int tmp_disp)
+{
 }
 
 // Se imprime el procesador vacío

@@ -4,6 +4,7 @@
 // Declaración adelantada de PCB y Queue
 typedef struct pcb PCB;
 typedef struct queue Queue;
+typedef struct tms TMS;
 
 // ============= MACROS =============
 
@@ -55,6 +56,12 @@ typedef struct queue Queue;
 #define WIDTH_TMP 27
 #define HEIGHT_TMP 8
 
+// KEYS
+#define STARTX_KEYS 2
+#define STARTY_KEYS 38
+#define WIDTH_KEYS 126
+#define HEIGHT_KEYS 3
+
 // Estructura de la GUI. «inner» significa que es una subventana
 typedef struct gui
 {
@@ -83,6 +90,9 @@ void print_prompt(WINDOW *inner_prompt, int row);
 void print_processor(WINDOW *inner_cpu, PCB pcb);
 void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue finished, Queue new);
 void print_ginfo(WINDOW *inner_ginfo, Queue execution);
+void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp);
+void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp);
+void print_tmp(WINDOW *inner_tmp, int *TMP, int tmp_disp);
 void empty_processor(WINDOW *inner_cpu);
 void clear_prompt(WINDOW *inner_prompt, int row);
 

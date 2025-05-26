@@ -25,6 +25,10 @@ int main(void)
   int minor_priority = 0;                          // Variable para saber que nodo extraer de ready para mandarlo a ejecución
   FILE *swap = NULL;                               // Bloque contiguo de almacenamiento binario en disco duro
   TMS tms;                                         // Estructura con: Arreglo de enteros para marcar el estado de los marcos de la SWAP (disponible/ocupado) y número de marcos disponibles
+  int swap_disp = 0;                               // Desplazamiento de SWAP
+  int tms_disp = 0;                                // Desplazamiento de TMS
+  int tmp_disp = 0;                                // Desplazamiento de TMP
+  int lists_disp = 0;                              // Desplazamiento de Listas
 
   // Se crean instancias de las colas
   Queue execution;
@@ -52,6 +56,7 @@ int main(void)
   print_queues(gui.inner_queues, execution, ready, finished, new); // Se imprimen las colas en su ventana
   print_prompt(gui.inner_prompt, 0);                               // Se imprime prompt en fila 0
   swap = create_swap();                                            // Crear un archivo lleno de ceros al inicio del programa (SWAP)
+  print_swap(gui.inner_swap, swap, swap_disp);
   initialize_tms(&tms);                                            // Inicializar tabla TMS (arreglo en ceros y páginas máximas)
   do
   {
@@ -60,7 +65,7 @@ int main(void)
       // Gestor de comandos de terminal
       exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                 &execution, &ready, &finished, &new,
-                                &timer, &init_timer, &speed_level, &tms, &swap);
+                                &timer, &init_timer, &speed_level, &tms, &swap, &swap_disp);
       if (ready.head) // Verifica si hay nodos en la cola Listos
       {
         // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
@@ -76,7 +81,7 @@ int main(void)
         // Gestor de comandos de terminal
         exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                   &execution, &ready, &finished, &new,
-                                  &timer, &init_timer, &speed_level, &tms, &swap);
+                                  &timer, &init_timer, &speed_level, &tms, &swap, &swap_disp);
       }
       else // Si se alcanzó el MAX_TIME se ejecuta la instrucción
       {

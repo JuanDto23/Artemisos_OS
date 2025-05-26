@@ -11,6 +11,9 @@ typedef struct gui GUI;
 #define INSTRUCTION_SIZE 32
 #define SWAP_SIZE 65536
 
+// Parámetros de desplazamientos
+#define TOTAL_DISP_SWAP 682
+
 // Se definen los offsets para el acceso a la memoria
 #define PAGE_JUMP 0x200
 #define INSTRUCTION_JUMP 0x20

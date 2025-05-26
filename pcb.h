@@ -9,7 +9,6 @@ typedef struct gui GUI;
 
 // Valores numéricos obtenidos de kbwhat.c
 #define ENTER 10
-#define BACKSPACE 127
 #define ESC 27
 
 // Número de buffers, tamaño de buffer y tamaño de línea
@@ -81,10 +80,11 @@ int count_lines(FILE *file);
 int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE ** swap);
+                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE ** swap,
+                     int *swap_disp);
 
 int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     TMS * tms, FILE **swap);
+                     TMS * tms, FILE **swap, int *swap_disp);
 
 int read_line(FILE **program, char *line);
 int interpret_instruction(GUI *gui, char *line, PCB *pcb);
