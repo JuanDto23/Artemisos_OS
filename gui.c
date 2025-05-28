@@ -221,15 +221,14 @@ void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp)
   // Muestra información general fija de la SWAP
   mvwprintw(inner_swap, 0, (WIDTH_SWAP - strlen("[65536] Inst en [4096] Marcos de [16] Inst de [32] Bytes c/u = [2097152] Bytes")) / 2, "[65536] Inst en [4096] Marcos de [16] Inst de [32] Bytes c/u = [2097152] Bytes");
 
-  int displayed_pages = 6; // Páginas desplegadas por desplazamiento
-  int instructions_per_disp = PAGE_SIZE * displayed_pages; // Instrucciones que llenan toda una ventana de SWAP
+  int instructions_per_disp = PAGE_SIZE * DISPLAYED_PAGES_SWAP; // Instrucciones que llenan toda una ventana de SWAP
   char buffer[INSTRUCTION_SIZE] = {0}; // Buffer que almacena instrucción leída desde archivo SWAP
   
   // Posiciona el puntero de SWAP en la primera instrucción del marco n, en función del desplazamiento swap_disp
   fseek(swap, instructions_per_disp * INSTRUCTION_JUMP * swap_disp, SEEK_SET);
   
   // Imprime las instrucciones de los 6 marcos conforme al desplazamiento
-  for (int page = 0; page < displayed_pages; page++) { // Recorrer paginas (columnas)
+  for (int page = 0; page < DISPLAYED_PAGES_SWAP; page++) { // Recorrer paginas (columnas)
     // Evita imprimir mas marcos de los especificados
     if(swap_disp == TOTAL_DISP_SWAP && page == 4) break; 
     // Recorrer instrucciones (renglones)
@@ -248,46 +247,45 @@ void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp)
   // Se limpia la subventana de la TMS
   werase(inner_tms);
 
-  // Muestra el mensaje de marco vs PID
-  
-  mvwprintw(inner_tms,0, 0/*(WIDTH_TMS - strlen("Marco-PID"))/2*/, "Marco-PID" );
+  // Muestra el mensaje de "Marco-PID"
+  mvwprintw(inner_tms,0, 0, "Marco-PID");
 
-  int total_displayed_pages = PAGE_SIZE; // Se restan los bordes de la ventana tms y la impresión de información 
-  // Se localiza el índice de la tabla tms según el número de desplazamiento (0-255)
-  int tms_index = 0;
-  if(tms_disp)
-    tms_index = tms_disp * total_displayed_pages; // tms_dips = 0 (0 - 15), tms_disp = 1 (16 - 31)
+  // Se localiza el índice de la tabla tms según el número de desplazamiento
+  int index_tms = tms_disp * DISPLAYED_PAGES_TMS;
 
-  for(int page = 0; page < total_displayed_pages; page++)
+  // Imprime las páginas de la TMS conforme al desplazamiento
+  for(int page = 0; page < DISPLAYED_PAGES_TMS; page++)
   {
-    mvwprintw(inner_tms, (page + 1), 0, "%03X - %d",tms_index, tms.table[tms_index]);
-    tms_index++;
+    mvwprintw(inner_tms, page + 1, 0, "%03X - %d", index_tms, tms.table[index_tms]);
+    index_tms++;
   }
-  // Refresca la subventana de tms
+
+  // Refresca la subventana de TMS
   wrefresh(inner_tms);
 }
 
 // Imprime el contenido de la TMP con desplazamiento
-void print_tmp(WINDOW *inner_tmp, PCB pcb, int tmp_disp)
+void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp)
 {
-    // Se limpia la subventana de la TMS
+  if (!pcb) return; // Si el PCB es nulo, no se imprime nada
+
+  // Se limpia la subventana de la TMS
   werase(inner_tmp);
 
-  // Muestra el mensaje de marco vs PID
-  mvwprintw(inner_tmp,0, (WIDTH_TMP - strlen("Mrc  EnSWAP"))/2,"Mrc  EnSWAP" );
+  // Muestra el mensaje de "Mrc  EnSWAP"
+  mvwprintw(inner_tmp, 0, 0, "Mrc  EnSWAP");
 
-  int total_displayed_adresses = HEIGHT_TMP - 3; // Se restan los bordes de la ventana tmp y la impresión de información 
-  // Se localiza el índice de la tabla tmsp según el número de desplazamiento
-  int tmp_index = 0;
-  if(tmp_disp)
-    tmp_index = tmp_disp * total_displayed_adresses;
+  // Se localiza el índice de la tabla TMP según el número de desplazamiento
+  int index_tmp = tmp_disp * (DISPLAYED_ADRESSES_TMP);
 
-  for(int adress = 0; adress <  pcb.TmpSize && adress < total_displayed_adresses; adress++)
+  // Imprime las direcciones de la TMP conforme al desplazamiento
+  for (int address = 0; (tmp_disp * (DISPLAYED_ADRESSES_TMP) + address) < pcb->TmpSize && address < DISPLAYED_ADRESSES_TMP; address++)
   {
-    mvwprintw(inner_tmp, (adress + 1), (WIDTH_TMP - strlen("Mrc  EnSWAP"))/2, "%03X - %03x",tmp_index, pcb.TMP[tmp_index]);
-    tmp_index++;
+    mvwprintw(inner_tmp, address + 1, 0, "%03X,  %03X", index_tmp, pcb->TMP[index_tmp]);
+    index_tmp++;
   }
-  // Refresca la subventana de tms
+
+  // Refresca la subventana de TMP
   wrefresh(inner_tmp);
 }
 

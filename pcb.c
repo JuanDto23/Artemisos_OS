@@ -137,7 +137,7 @@ int count_lines(FILE *file)
   while ((c = fgetc(file)) != EOF)
   {
     // Dos saltos de líneas consecutivos indican una línea vacía
-    if (c == '\n' && last != '\n')      
+    if (c == '\n' && last != '\n')
       lines++;
     last = c;
   }
@@ -150,8 +150,8 @@ int count_lines(FILE *file)
 int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE **swap,
-                     int *swap_disp, int *tms_disp, int * tmp_disp)
+                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS *tms, FILE **swap,
+                     int *swap_disp, int *tms_disp, int *tmp_disp, PCB *execution_pcb)
 {
   // Si se presionó una tecla en la terminal (kbhit)
   if (kbhit())
@@ -248,40 +248,71 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
         (*speed_level)++;                                        // Se incrementa el nivel de velocidad
       }
     }
-    else if (*c == KEY_F(5)) // Retrocede TMS (PgUp)
+    else if (*c == KEY_PPAGE) // Retrocede TMS (PgUp)
     {
-      if((*tms_disp) > 0)
+      if ((*tms_disp) > 0)
       {
         (*tms_disp)--;
       }
-      print_tms(gui -> inner_tms, *tms, *tms_disp);
+      print_tms(gui->inner_tms, *tms, *tms_disp);
     }
-    else if (*c == KEY_F(6)) // Avanza TMS (PgDn)
+    else if (*c == KEY_NPAGE) // Avanza TMS (PgDn)
     {
-      if((*tms_disp) < TOTAL_DISP_TMS)
+      if ((*tms_disp) < TOTAL_DISP_TMS)
       {
         (*tms_disp)++;
       }
-      print_tms(gui -> inner_tms, *tms, *tms_disp);
+      print_tms(gui->inner_tms, *tms, *tms_disp);
     }
     else if (*c == KEY_IC) // Retrocede TMP (ins)
-    {}
+    {
+      if ((*tmp_disp) > 0)
+      {
+        (*tmp_disp)--;
+      }
+      print_tmp(gui->inner_tmp, execution_pcb, *tmp_disp);
+    }
     else if (*c == KEY_DC) // Avanza TMP (supr)
-    {}
+    {
+      // Total de desplazamientos de TMP
+      int total_disp_tmp = execution_pcb->TmpSize / (DISPLAYED_ADRESSES_TMP);
+      if ((*tmp_disp) < total_disp_tmp)
+      {
+        (*tmp_disp)++;
+      }
+      print_tmp(gui->inner_tmp, execution_pcb, *tmp_disp);
+    }
+    else if (*c == KEY_F(5)) // Retrocede RAM (F5)
+    {
+      if (execution->elements > 0 && (*swap_disp) > 0)
+      {
+        (*swap_disp)--;
+      }
+      print_swap(gui->inner_swap, *swap, *swap_disp);
+    }
+    else if (*c == KEY_F(6)) // Avanza RAM (F6)
+    {
+      if (execution->elements > 0 && (*swap_disp) < TOTAL_DISP_SWAP)
+      {
+        (*swap_disp)++;
+      }
+      print_swap(gui->inner_swap, *swap, *swap_disp);
+    }
     else if (*c == KEY_F(7)) // Retrocede SWAP (F7)
     {
-      if((*swap_disp) > 0){
+      if ((*swap_disp) > 0)
+      {
         (*swap_disp)--;
       }
       print_swap(gui->inner_swap, *swap, *swap_disp);
     }
     else if (*c == KEY_F(8)) // Avanza SWAP (F8)
     {
-      if((*swap_disp) < TOTAL_DISP_SWAP){
+      if ((*swap_disp) < TOTAL_DISP_SWAP)
+      {
         (*swap_disp)++;
       }
       print_swap(gui->inner_swap, *swap, *swap_disp);
-      
     }
     else if (*c == ESC) // Acceso rápido para salir del programa con ESC
     {
@@ -318,7 +349,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
 
 // Evalúa los comandos ingresados por el usuario
 int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     TMS *tms, FILE **swap, int *swap_disp, int * tmp_disp, int * tms_disp)
+                     TMS *tms, FILE **swap, int *swap_disp, int *tmp_disp, int *tms_disp)
 {
   /* TOKENS */
   char command[256] = {0};    // Almacena el comando ingresado
@@ -410,7 +441,8 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           }
 
           // Se actualiza el peso W una vez creado el nuevo proceso y actualizado el NumUs
-          if (NumUs) W = 1.0 / NumUs;
+          if (NumUs)
+            W = 1.0 / NumUs;
 
           /* Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso
             del mismo usuario. Ya sea en Listos o en Ejecución */
@@ -420,37 +452,37 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
             // Asignar la misma TMP al nuevo proceso
             new_pcb->TMP = brother_pcb->TMP;
           }
-          else if((brother_pcb = search_brother_process(new_pcb->UID, new_pcb->file_name, *ready)))
+          else if ((brother_pcb = search_brother_process(new_pcb->UID, new_pcb->file_name, *ready)))
           {
             // Asignar la misma TMP al nuevo proceso
             new_pcb->TMP = brother_pcb->TMP;
           }
           // Flujo de acción para procesos sin hermanos
-          //Verificar que el proceso sea de menor tamaño que la SWAP
-          else if (lines <= SWAP_SIZE) 
+          // Verificar que el proceso sea de menor tamaño que la SWAP
+          else if (lines <= SWAP_SIZE)
           {
             // Si la cantidad de marcos libres en SWAP alcanzan para cargar el proceso
-            if (new_pcb->TmpSize <= tms->available_pages) {
+            if (new_pcb->TmpSize <= tms->available_pages)
+            {
               // Inserta el nodo en la cola Listos despues de verificar las condiciones de SWAP
               enqueue(new_pcb, ready);
-              // Se imprime mensaje de proceso creado 
+              // Se imprime mensaje de proceso creado
               mvwprintw(gui->inner_msg, 0, 0, "Proceso: %d [%s] UID: [%d]", new_pcb->pid, new_pcb->file_name, new_pcb->UID);
               mvwprintw(gui->inner_msg, 1, 0, "Creado correctamente.");
 
               // Se reserva espacio para la tmp del proceso
-              new_pcb->TMP = (int *) malloc(sizeof(int) * tmp_size);
-              // Se imprime la tmp del proceso creado
-              print_tmp(gui->inner_tmp, *new_pcb, *tmp_disp);
+              new_pcb->TMP = (int *)malloc(sizeof(int) * tmp_size);
 
               // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
               load_to_swap(new_pcb, tms, swap, lines, gui);
-              
+
               // Se cierra el archivo una vez que se ha cargado en la swap
               fclose(file);
               // Se evita puntero colgante
               new_pcb->program = NULL;
             }
-            else { // De lo contrario, inserta el proceso al final de la lista Nuevos (puede entrar después)
+            else
+            { // De lo contrario, inserta el proceso al final de la lista Nuevos (puede entrar después)
               // Insertar el nuevo proceso en la cola Nuevos
               enqueue(new_pcb, new);
               // Se imprime mensaje de proceso creado e insertado en Nuevos
@@ -469,6 +501,8 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
             // Se evita puntero colgante
             new_pcb->program = NULL;
           }
+          /* Se actualiza las impresiones de la SWAP y TMS 
+             dado que el nuevo proceso puede que se haya cargado en la SWAP */
           print_swap(gui->inner_swap, *swap, *swap_disp);
           print_tms(gui->inner_tms, *tms, *tms_disp);
         }
@@ -589,7 +623,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
 }
 
 // Lee una línea del swap y la almacena en un buffer de línea
-void read_line_from_swap(FILE *swap, char *line, PCB * execution_pcb)
+void read_line_from_swap(FILE *swap, char *line, PCB *execution_pcb)
 {
   /*
     PC = 25
@@ -597,22 +631,22 @@ void read_line_from_swap(FILE *swap, char *line, PCB * execution_pcb)
     offset = 25 % 16 = 9
     execution_pcb->TMP[page_from_PC] = 2
     TMP[0] = 0, TMP[1] = 2
-    TMS[0] = 1, TMS[1] = 3,  TMS[2]=1 
+    TMS[0] = 1, TMS[1] = 3,  TMS[2]=1
   */
-  
+
   // Calcular primero a que marco pertenece el PC (PC/Cantidad de instrucciones por marco)
   //  ¿Cuántos marcos ocupa? ¿En que numero de marco de la tmp está la instrucción actual?
-  int index_page_from_tms = (int) execution_pcb->PC / PAGE_SIZE;
+  int index_page_from_tms = (int)execution_pcb->PC / PAGE_SIZE;
 
   // Calcular el desplazamiento (Offset) en el Marco para el PC (PC%16).
-  int offset = execution_pcb -> PC % PAGE_SIZE;
+  int offset = execution_pcb->PC % PAGE_SIZE;
 
   // Marco en SWAP de la TMP para el marco calculado (index_page_from_tms)
   int page_from_swap = execution_pcb->TMP[index_page_from_tms];
 
   // Se obtiene la dirección real en SWAP (DRS)
-  int drs =  page_from_swap* PAGE_JUMP | offset * INSTRUCTION_JUMP;
-    
+  int drs = page_from_swap * PAGE_JUMP | offset * INSTRUCTION_JUMP;
+
   // Se posiciona el puntero de la SWAP en la instrucción apuntada por PC
   fseek(swap, drs, SEEK_SET);
   // Se almacena la siguiente instrucción en el buffer

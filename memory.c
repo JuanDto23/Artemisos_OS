@@ -10,11 +10,11 @@
 
 /* Crear un archivo lleno de ceros al inicio del programa,
    para el manejo de memoria de intercambio (swap) */
-FILE *create_swap(void)
+void create_swap(FILE **swap)
 {
   // Crear el archivo binario SWAP en modo lectura/escritura binaria
-  FILE *swap = fopen("SWAP", "w+b");
-  if (!swap)
+  *swap = fopen("SWAP", "w+b");
+  if (!(*swap))
   {
     endwin();
     exit(1);
@@ -27,23 +27,22 @@ FILE *create_swap(void)
   int *buffer = (int *)malloc(total_bytes);
   if (!buffer)
   {
-    fclose(swap);
+    fclose(*swap);
     endwin();
     exit(1);
   }
   memset(buffer, 0, total_bytes);
 
   // Escribir en todo el archivo SWAP los 0's del bloque de memoria inicializada
-  if (fwrite(buffer, 1, total_bytes, swap) != total_bytes)
+  if (fwrite(buffer, 1, total_bytes, *swap) != total_bytes)
   {
-    fclose(swap);
+    fclose(*swap);
     endwin();
     exit(1);
   }
 
   // Se libera el bloque de memoria inicializada
   free(buffer);
-  return swap;
 }
 
 // Cuenta los marcos disponibles en SWAP (puede haber marcos dispersos)

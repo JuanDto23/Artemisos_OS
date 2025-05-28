@@ -53,7 +53,7 @@ typedef struct tms TMS;
 // TMP
 #define STARTX_TMP 16
 #define STARTY_TMP 19
-#define WIDTH_TMP 16
+#define WIDTH_TMP 14
 #define HEIGHT_TMP 8
 
 // KEYS
@@ -61,6 +61,13 @@ typedef struct tms TMS;
 #define STARTY_KEYS 38
 #define WIDTH_KEYS 126
 #define HEIGHT_KEYS 3
+
+// Parámetros de desplazamientos
+#define TOTAL_DISP_SWAP 682 // 4096 / 6 = 682
+#define TOTAL_DISP_TMS 255  // 4096 / 16 = 255
+#define DISPLAYED_PAGES_SWAP 6 // Cantidad de páginas que se muestran en la SWAP
+#define DISPLAYED_PAGES_TMS 16 // Cantidad de páginas que se muestran en la TMS
+#define DISPLAYED_ADRESSES_TMP HEIGHT_TMP - 3 // Cantidad de direcciones que se muestran en la TMP
 
 // Estructura de la GUI. «inner» significa que es una subventana
 typedef struct gui
@@ -92,7 +99,7 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue fini
 void print_ginfo(WINDOW *inner_ginfo, Queue execution);
 void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp);
 void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp);
-void print_tmp(WINDOW *inner_tmp, PCB pcb, int tmp_disp);
+void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp);
 void empty_processor(WINDOW *inner_cpu);
 void clear_prompt(WINDOW *inner_prompt, int row);
 

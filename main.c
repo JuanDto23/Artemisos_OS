@@ -55,10 +55,11 @@ int main(void)
   empty_processor(gui.inner_cpu);                                  // Se imprime el contenido del CPU inicialmente vacío
   print_queues(gui.inner_queues, execution, ready, finished, new); // Se imprimen las colas en su ventana
   print_prompt(gui.inner_prompt, 0);                               // Se imprime prompt en fila 0
-  swap = create_swap();                                            // Crear un archivo lleno de ceros al inicio del programa (SWAP)
-  print_swap(gui.inner_swap, swap, swap_disp);
-  print_tms(gui.inner_tms, tms, tms_disp);
+  create_swap(&swap);                                              // Crear un archivo lleno de ceros al inicio del programa (SWAP)
+  print_swap(gui.inner_swap, swap, swap_disp);                     // Imprime el contenido de la SWAP con desplazamiento
   initialize_tms(&tms);                                            // Inicializar tabla TMS (arreglo en ceros y páginas máximas)
+  print_tms(gui.inner_tms, tms, tms_disp);                         // Imprime el contenido de la TMS con desplazamiento
+  print_tmp(gui.inner_tmp, execution.head, tmp_disp);              // Imprime el contenido de la TMP con desplazamiento
   do
   {
     if (!execution.head) // Si la cola Ejecución está vacía
@@ -66,7 +67,8 @@ int main(void)
       // Gestor de comandos de terminal
       exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                 &execution, &ready, &finished, &new,
-                                &timer, &init_timer, &speed_level, &tms, &swap, &swap_disp, &tms_disp, &tmp_disp);
+                                &timer, &init_timer, &speed_level, &tms,
+                                &swap, &swap_disp, &tms_disp, &tmp_disp, execution.head);
       if (ready.head) // Verifica si hay nodos en la cola Listos
       {
         // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad
@@ -82,14 +84,15 @@ int main(void)
         // Gestor de comandos de terminal
         exited = command_handling(&gui, buffers, &c, &index, &index_history,
                                   &execution, &ready, &finished, &new,
-                                  &timer, &init_timer, &speed_level, &tms, &swap, &swap_disp, &tms_disp, &tmp_disp);
+                                  &timer, &init_timer, &speed_level, &tms, 
+                                  &swap, &swap_disp, &tms_disp, &tmp_disp, execution.head);
       }
       else // Si se alcanzó el MAX_TIME se ejecuta la instrucción
       {
         /* Si no hay más instrucciones del proceso en ejecución, esto es,
         si no se encuentra END, lo que representa un error*/
         read_line_from_swap(swap, line, execution.head);
-        if (execution.head -> PC == execution.head -> lines && strcmp(line, "END"))  
+        if (execution.head->PC == execution.head->lines && strcmp(line, "END"))
         {
           // Se hacen acciones para cuando se terminó de ejecutar el proceso
           // Calculo de parámetros de planificación
@@ -117,8 +120,8 @@ int main(void)
           // Se imprime mensaje
           mvwprintw(gui.inner_msg, 0, 0, "Terminación anormal del programa.");
           // Se imprime procesador vacío
-          //empty_processor(gui.inner_cpu);
-                    
+          // empty_processor(gui.inner_cpu);
+
           // Se refresca la subventana de mensajes
           wrefresh(gui.inner_msg);
         }
@@ -129,7 +132,7 @@ int main(void)
           if (result_interpretation != 0 && result_interpretation != -1) // Instrucción ejecutada correctamente
           {
             // Se incrementa PC
-            (execution.head->PC)++; 
+            (execution.head->PC)++;
             // Se incrementa el número de instrucciones ejecutadas (quantum)
             quantum++;
             // Se actualizan la impresión de los registros del pcb en ejecución
@@ -170,15 +173,15 @@ int main(void)
 
             // Se extrae nodo en ejecución y encola en Terminados
             enqueue(dequeue(&execution), &finished);
-            
+
             // Se imprime procesador vacío
             empty_processor(gui.inner_cpu);
             // Se refresca la subventana de mensajes
             wrefresh(gui.inner_msg);
           }
-          if (quantum == MAXQUANTUM) // quantum llegó a MAXQUANTUM (4) y aún no se llega al fin del archivo
+          if (quantum == MAXQUANTUM) // quantum llegó a MAXQUANTUM y aún no se llega al fin del archivo
           {
-            if (execution.head) 
+            if (execution.head)
             {
               // Sacar el único nodo en Ejecución, e insertarlo al final de Listos
               enqueue((dequeue(&execution)), &ready);
@@ -186,11 +189,13 @@ int main(void)
               update_parameters(&ready);
               // Mostrar el proceso extraído de Ejecución por 3 segundos
               print_queues(gui.inner_queues, execution, ready, finished, new);
+              wmove(gui.inner_prompt, 0, PROMPT_START); // Se coloca el cursor en su lugar
+              wrefresh(gui.inner_prompt); // Refresca las ventana de inner_prompt
               sleep(3);
               // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad y se extrae
               minor_priority = get_minor_priority(ready);
-              enqueue(extract_by_priority(minor_priority, &ready), &execution);   
-            }  
+              enqueue(extract_by_priority(minor_priority, &ready), &execution);
+            }
             /* Se reinicia para comenzar a ejecutar
             el siguiente proceso o el mismo si no hay más */
             quantum = 0;
@@ -199,6 +204,7 @@ int main(void)
         timer = init_timer;                                              // Se reinicia temporizador para volver a escribir en línea de comandos
         print_ginfo(gui.inner_ginfo, execution);                         // Se imprime información general
         print_queues(gui.inner_queues, execution, ready, finished, new); // Se imprimen las colas en su ventana
+        print_tmp(gui.inner_tmp, execution.head, tmp_disp);              // Imprime el contenido de la TMP con desplazamiento
       }
     }
     wmove(gui.inner_prompt, 0, PROMPT_START + index); // Se coloca el cursor en su lugar

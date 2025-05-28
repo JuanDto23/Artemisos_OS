@@ -21,7 +21,7 @@ typedef struct gui GUI;
 #define FALSE 0
 
 // Intervalo de tiempo antes de la siguiente instrucción
-#define MAX_TIME 100000
+#define MAX_TIME 500000
 
 // Número máximo de niveles
 #define MAX_LEVEL 15
@@ -82,7 +82,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished, Queue *new,
                      unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE ** swap,
-                     int *swap_disp, int *tms_disp, int * tmp_disp);
+                     int *swap_disp, int *tms_disp, int * tmp_disp, PCB *execution_pcb);
 
 int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
                      TMS * tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp);
