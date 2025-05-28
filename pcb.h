@@ -54,6 +54,7 @@ typedef struct pcb
   // Parámetros de la memoria
   int TmpSize; // Tamaño de la TMP (cantidad de marcos del proceso)
   int *TMP;    // Tabla de mapa/marcos de proceso
+  int lines;   // Cantidad de líneas del programa del proceso
 } PCB;
 
 // Se declaran las variables usadas en pcb.c, pero no se reserva memoria
@@ -81,12 +82,11 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
                      int *c, int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished, Queue *new,
                      unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE ** swap,
-                     int *swap_disp, int * tns_disp, int * tmp_disp);
+                     int *swap_disp, int *tms_disp, int * tmp_disp);
 
 int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     TMS * tms, FILE **swap, int *swap_disp, int * tmp_disp);
+                     TMS * tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp);
 
-int read_line(FILE **program, char *line);
+void read_line_from_swap(FILE *swap, char *line, PCB *execution_pcb);
 int interpret_instruction(GUI *gui, char *line, PCB *pcb);
-
 #endif

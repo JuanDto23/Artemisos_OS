@@ -86,21 +86,22 @@ int main(void)
       }
       else // Si se alcanzó el MAX_TIME se ejecuta la instrucción
       {
-        /* Si no hay más líneas del archivo por leer, esto es,
+        /* Si no hay más instrucciones del proceso en ejecución, esto es,
         si no se encuentra END, lo que representa un error*/
-        if (!read_line(&execution.head->program, line))
+        read_line_from_swap(swap, line, execution.head);
+        if (execution.head -> PC == execution.head -> lines && strcmp(line, "END"))  
         {
-          // Cierra el archivo
-          fclose(execution.head->program);
-          // Evita puntero colgante
-          execution.head->program = NULL;
+          // Se hacen acciones para cuando se terminó de ejecutar el proceso
+          // Calculo de parámetros de planificación
           // Se verifica que no hay otro proceso del mismo usuario en Listos
           if (!search_uid(execution.head->UID, ready))
           {
             NumUs--;
           }
+
           // Se extrae proceso de Ejecución y se encola a Terminados
           enqueue(dequeue(&execution), &finished);
+
           // Se actualiza el valor de W
           if (NumUs)
           {
@@ -116,23 +117,19 @@ int main(void)
           // Se imprime mensaje
           mvwprintw(gui.inner_msg, 0, 0, "Terminación anormal del programa.");
           // Se imprime procesador vacío
-          empty_processor(gui.inner_cpu);
+          //empty_processor(gui.inner_cpu);
+                    
           // Se refresca la subventana de mensajes
           wrefresh(gui.inner_msg);
         }
         else // Si hay más líneas por leer
         {
-          // Línea sin salto de línea o retorno de carro
-          line[strcspn(line, "\r\n")] = '\0';
           // Interpreta y ejecuta la instrucción
           result_interpretation = interpret_instruction(&gui, line, execution.head);
           if (result_interpretation != 0 && result_interpretation != -1) // Instrucción ejecutada correctamente
           {
-            // Si se lee algo, se incrementa PC y quantum, de otro modo, solo quantum
-            if (result_interpretation != 2)
-            {
-              (execution.head->PC)++; // Se incrementa PC
-            }
+            // Se incrementa PC
+            (execution.head->PC)++; 
             // Se incrementa el número de instrucciones ejecutadas (quantum)
             quantum++;
             // Se actualizan la impresión de los registros del pcb en ejecución
@@ -148,10 +145,6 @@ int main(void)
           }
           else // Se encontró la instrucción END o un error, en cuarquier caso terminar el pcb
           {
-            // Cierra el archivo
-            fclose(execution.head->program);
-            // Evita puntero colgante
-            execution.head->program = NULL;
             if (result_interpretation == -1) // Hubo un error
             {
               mvwprintw(gui.inner_msg, 1, 0, "Terminación anormal del programa.");
@@ -174,8 +167,10 @@ int main(void)
             {
               W = 0.0; // No hay ningún usuario
             }
+
             // Se extrae nodo en ejecución y encola en Terminados
             enqueue(dequeue(&execution), &finished);
+            
             // Se imprime procesador vacío
             empty_processor(gui.inner_cpu);
             // Se refresca la subventana de mensajes
@@ -183,7 +178,7 @@ int main(void)
           }
           if (quantum == MAXQUANTUM) // quantum llegó a MAXQUANTUM (4) y aún no se llega al fin del archivo
           {
-            if (ready.head) // Se verifica si hay proceso en Listos para hacer el SWAP
+            if (execution.head) 
             {
               // Sacar el único nodo en Ejecución, e insertarlo al final de Listos
               enqueue((dequeue(&execution)), &ready);
@@ -194,8 +189,8 @@ int main(void)
               sleep(3);
               // Ahora ya no se extrae el primer nodo de listos, se busca el de menor prioridad y se extrae
               minor_priority = get_minor_priority(ready);
-              enqueue(extract_by_priority(minor_priority, &ready), &execution);
-            }
+              enqueue(extract_by_priority(minor_priority, &ready), &execution);   
+            }  
             /* Se reinicia para comenzar a ejecutar
             el siguiente proceso o el mismo si no hay más */
             quantum = 0;

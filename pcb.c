@@ -165,7 +165,8 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
       // Se le coloca carácter nulo para finalizar la cadena prompt
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
-      exited = evaluate_command(gui, buffers[0], execution, ready, finished, new, tms, swap, swap_disp, tmp_disp);
+      exited = evaluate_command(gui, buffers[0], execution, ready, finished,
+                                new, tms, swap, swap_disp, tms_disp, tmp_disp);
       // Se crea historial
       for (int i = NUMBER_BUFFERS - 1; i >= 0; i--)
       {
@@ -317,7 +318,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
 
 // Evalúa los comandos ingresados por el usuario
 int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     TMS *tms, FILE **swap, int *swap_disp, int * tmp_disp)
+                     TMS *tms, FILE **swap, int *swap_disp, int * tmp_disp, int * tms_disp)
 {
   /* TOKENS */
   char command[256] = {0};    // Almacena el comando ingresado
@@ -329,7 +330,6 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
   int tmp_size = 0;           // Almacena el número de marcos del archivo a cargar
   int lines = 0;              // Almacena el número de líneas del archivo a cargar
   int KCPUxU = 0;             // Almacena el valor de KCPUxU del usuario
-  int pid_brother_process = 0;// Almacena el pid del proceso que ya tiene el mismo archivo cargado en SWAP
 
   // Se separa en tokens el comando leído de prompt
   sscanf(buffer, "%s %s %s", command, parameter1, parameter2); // Que pasa si como segundo parámetro es una a?
@@ -378,7 +378,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           tmp_size = (int)ceil((double)lines / PAGE_SIZE);
 
           // Se crea el proceso inicializando sus atributos
-          PCB *new_pcb = create_pcb(ready->pid, parameter1, &file, value_par2, tmp_size);
+          PCB *new_pcb = create_pcb(ready->pid, parameter1, &file, value_par2, tmp_size, lines);
           if (!new_pcb)
           {
             mvwprintw(gui->inner_msg, 1, 0, "Error: no pudo crear el proceso %d [%s].", ready->pid, parameter1);
@@ -414,20 +414,17 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
 
           /* Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso
             del mismo usuario. Ya sea en Listos o en Ejecución */
-          if ( (pid_brother_process = search_process(new_pcb->UID, new_pcb->file_name, *execution)) )
+          PCB *brother_pcb;
+          if ((brother_pcb = search_brother_process(new_pcb->UID, new_pcb->file_name, *execution)))
           {
-            // De haberse encontrado en ejecución, asignar la misma TMP al nuevo proceso
-            //mvwprintw(gui->inner_msg, 1, 0, "Proceso hermano: %d", pid_brother_process);
-            set_same_tmp(*execution, new_pcb, pid_brother_process);
-
+            // Asignar la misma TMP al nuevo proceso
+            new_pcb->TMP = brother_pcb->TMP;
           }
-          else if( (pid_brother_process= search_process(new_pcb->UID, new_pcb->file_name, *ready)))
+          else if((brother_pcb = search_brother_process(new_pcb->UID, new_pcb->file_name, *ready)))
           {
-            // De haberse encontrado en ready, asignar la misma TMP al nuevo proceso
-            //mvwprintw(gui->inner_msg, 1, 0, "Proceso hermano: %d", pid_brother_process);
-            set_same_tmp(*ready, new_pcb, pid_brother_process);
+            // Asignar la misma TMP al nuevo proceso
+            new_pcb->TMP = brother_pcb->TMP;
           }
-          
           // Flujo de acción para procesos sin hermanos
           //Verificar que el proceso sea de menor tamaño que la SWAP
           else if (lines <= SWAP_SIZE) 
@@ -464,7 +461,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           else // La swap no es suficiente para cargar el proceso
           {
             // Enviar el proceso directamente a Terminados, indicando el motivo
-            enqueue(create_pcb(ready->pid, parameter1, &file, value_par2, tmp_size), finished);
+            enqueue(new_pcb, finished);
             mvwprintw(gui->inner_msg, 0, 0, "Proceso: %d [%s] UID: [%d] -> Terminados", new_pcb->pid, new_pcb->file_name, new_pcb->UID);
             mvwprintw(gui->inner_msg, 1, 0, "El programa excede el tamaño del SWAP. Actualice el sistema.");
             // Se cierra el archivo dado que no se cargó en la swap
@@ -473,6 +470,7 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
             new_pcb->program = NULL;
           }
           print_swap(gui->inner_swap, *swap, *swap_disp);
+          print_tms(gui->inner_tms, *tms, *tms_disp);
         }
         else // Si el archivo no existe
         {
@@ -590,19 +588,35 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
   return 0; // Indica que no salió del programa
 }
 
-// Lee una línea del archivo y la almacena en un buffer de línea
-int read_line(FILE **f, char *line)
+// Lee una línea del swap y la almacena en un buffer de línea
+void read_line_from_swap(FILE *swap, char *line, PCB * execution_pcb)
 {
-  // Se lee una línea del archivo
-  fgets(line, INSTRUCTION_SIZE, *f);
-  if (!feof(*f)) // Si no se ha llegado al final del archivo
-  {
-    return 1; // Hay todavía líneas por leer
-  }
-  else // Si se llegó al final del archivo
-  {
-    return 0; // No hay líneas por leer
-  }
+  /*
+    PC = 25
+    page_from_PC = 25 / 16 = 1
+    offset = 25 % 16 = 9
+    execution_pcb->TMP[page_from_PC] = 2
+    TMP[0] = 0, TMP[1] = 2
+    TMS[0] = 1, TMS[1] = 3,  TMS[2]=1 
+  */
+  
+  // Calcular primero a que marco pertenece el PC (PC/Cantidad de instrucciones por marco)
+  //  ¿Cuántos marcos ocupa? ¿En que numero de marco de la tmp está la instrucción actual?
+  int index_page_from_tms = (int) execution_pcb->PC / PAGE_SIZE;
+
+  // Calcular el desplazamiento (Offset) en el Marco para el PC (PC%16).
+  int offset = execution_pcb -> PC % PAGE_SIZE;
+
+  // Marco en SWAP de la TMP para el marco calculado (index_page_from_tms)
+  int page_from_swap = execution_pcb->TMP[index_page_from_tms];
+
+  // Se obtiene la dirección real en SWAP (DRS)
+  int drs =  page_from_swap* PAGE_JUMP | offset * INSTRUCTION_JUMP;
+    
+  // Se posiciona el puntero de la SWAP en la instrucción apuntada por PC
+  fseek(swap, drs, SEEK_SET);
+  // Se almacena la siguiente instrucción en el buffer
+  fread(line, sizeof(char), INSTRUCTION_JUMP, swap);
 }
 
 // Interpreta y ejecuta la instrucción leída de una línea del archivo de programa de un pcb
@@ -624,10 +638,6 @@ int interpret_instruction(GUI *gui, char *line, PCB *pcb)
 
   // Se separa en tokens la línea leída y se calcula cuántos hay
   int items = sscanf(line, "%s %s %s", instruction, p1, p2);
-
-  // No se leyó nada
-  if (items == -1)
-    return 2; // No se encontró instrucción
 
   //  Se comprueba si la instrucción es END
   if (!strcmp(instruction, "END"))

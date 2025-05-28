@@ -58,8 +58,7 @@ void initialize_gui(GUI *gui)
   mvwprintw(gui->tmp, 0, (WIDTH_TMP - strlen("TMP")) / 2, "%s", "TMP");
   mvwprintw(gui->keys, 0, (WIDTH_KEYS - strlen("TECLAS ESPECIALES")) / 2, "%s", "TECLAS ESPECIALES");
 
-  // Escribir línea estática en las ventanas de TMS, KEYS
-  mvwprintw(gui->inner_tms, 0, 0, "Marco-PID");
+  // Escribir línea estática en la ventanaKEYS
   mvwprintw(gui->inner_keys, 0, 0, "[Up][Down]:History  [Left][Right]:Speed  [PgUp][PgDwn]:TMS  [Ins][Supr]:TMP  [F5][F6]:RAM  [F7][F8]:SWAP  [Alt-][Alt+]:Lists");
 
   // Refrescar ventanas
@@ -111,7 +110,7 @@ void print_processor(WINDOW *inner_cpu, PCB pcb)
   mvwprintw(inner_cpu, 4, 0, "P:[%d]", pcb.P);
   mvwprintw(inner_cpu, 5, 0, "KCPU:[%d]", pcb.KCPU);
   // Parte derecha
-  mvwprintw(inner_cpu, 0, WIDTH_CPU / 2, "PC:[%d]", pcb.PC);
+  mvwprintw(inner_cpu, 0, WIDTH_CPU / 2, "PC:[%d]=[0x%04X] ", pcb.PC, pcb.PC);
   mvwprintw(inner_cpu, 1, WIDTH_CPU / 2, "IR:[%s]", pcb.IR);
   mvwprintw(inner_cpu, 2, WIDTH_CPU / 2, "PID:[%d]", pcb.pid);
   mvwprintw(inner_cpu, 3, WIDTH_CPU / 2, "NAME:[%s]", pcb.file_name);
@@ -235,7 +234,7 @@ void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp)
     if(swap_disp == TOTAL_DISP_SWAP && page == 4) break; 
     // Recorrer instrucciones (renglones)
     for(int instruction = 0; instruction < PAGE_SIZE; instruction++) { 
-      fread(buffer, sizeof(char), INSTRUCTION_SIZE, swap); 
+      fread(buffer, sizeof(char), INSTRUCTION_JUMP, swap); 
       mvwprintw(inner_swap, instruction + 1, ((page + 1)*WIDTH_SWAP / 6) - 20, "[%04X] %s", (swap_disp*instructions_per_disp + page*PAGE_SIZE) | instruction, buffer); //Imprime las instrucciones guardadas en la SWAP junto con su direccion
     }
   }
@@ -250,9 +249,10 @@ void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp)
   werase(inner_tms);
 
   // Muestra el mensaje de marco vs PID
+  
   mvwprintw(inner_tms,0, 0/*(WIDTH_TMS - strlen("Marco-PID"))/2*/, "Marco-PID" );
 
-  int total_displayed_pages = HEIGHT_TMS - 3; // Se restan los bordes de la ventana tms y la impresión de información 
+  int total_displayed_pages = PAGE_SIZE; // Se restan los bordes de la ventana tms y la impresión de información 
   // Se localiza el índice de la tabla tms según el número de desplazamiento (0-255)
   int tms_index = 0;
   if(tms_disp)
