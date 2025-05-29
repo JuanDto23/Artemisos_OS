@@ -372,3 +372,27 @@ PCB *search_process_smaller_swap(Queue *new, int available_pages)
   }
   return NULL; // La cola está vacía o no se encontró ningún proceso a cargar desde nuevos
 }
+
+// Buscar en new, procesos hermanos del proceso nuevo que se cargó a la swap (ready)
+PCB * extract_brother_process(int uid, char *filename, Queue * queue)
+{
+  PCB *current = NULL;
+  int found = FALSE;
+
+  current = queue->head;
+  while (current && !found)
+  {
+    // Se comprueba que el archivo y el id usuario coincidan con el dueño del nodo actual
+    found = !strcmp(current->file_name, filename) && (current->UID == uid);
+    if (!found)
+    {
+      // Se avanza al siguiente nodo de la lista
+      current = current->next;
+    }
+  }
+  if (current)
+  {
+    return extract_by_pid(current->pid, queue); // Se encontró el nodo hermano en la cola
+  }
+  return FALSE; // La cola está vacía o no se encontró el archivo
+}

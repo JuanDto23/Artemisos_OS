@@ -28,4 +28,5 @@ void update_parameters(Queue *queue);
 int get_KCPUxU(int uid, Queue queue);
 PCB *search_brother_process(int uid, char *filename, Queue queue);
 PCB *search_process_smaller_swap(Queue *new, int avalible_pages);
+PCB * extract_brother_process(int uid, char *filename, Queue * queue);
 #endif

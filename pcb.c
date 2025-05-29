@@ -610,6 +610,19 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
                 fclose(new_pcb->program);
                 // Se evita puntero colgante
                 new_pcb->program = NULL;
+
+                // Hay mas nodos en nuevos y se busca entre ellos los hermanos del proceso nuevo que acaba de ser cargado a ready, para cargarlos también
+                PCB * aux = new->head; // Puntero auxiliar para recorrer toda la cola new
+                while(aux)
+                {
+                  brother_pcb = extract_brother_process(new_pcb->UID, new_pcb->file_name, new);
+                  // Se le asigna la misma tmp que su hermano
+                  brother_pcb -> TMP = new_pcb ->TMP;
+                  brother_pcb -> TmpSize = new_pcb ->TmpSize;
+                  // Se carga el hermano también a listos
+                  enqueue(brother_pcb, ready);
+                  aux = aux -> next;
+                }
               }
             }
           }
@@ -652,8 +665,9 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
             NumUs--;
           }
 
+          // ERROR: TAMBIÉN SE DEBEN BUSCAR HERMANOS EN EJECUCIÓN (si matas el hermano en ready y el otro hermano esta ejecutandose)
           PCB *brother_pcb;
-          if (!(brother_pcb = search_brother_process(pcb_extracted->UID, pcb_extracted->file_name, *ready)))
+          if (!(brother_pcb = search_brother_process(pcb_extracted->UID, pcb_extracted->file_name, *ready)) && !(brother_pcb = search_brother_process(pcb_extracted->UID, pcb_extracted->file_name, *execution)))
           {
             // Establecer sus marcos de SWAP cómo libres en la TMS
             free_pages_from_tms(pcb_extracted, tms);
@@ -687,13 +701,26 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
                 fclose(new_pcb->program);
                 // Se evita puntero colgante
                 new_pcb->program = NULL;
+
+                // Hay mas nodos en nuevos y se busca entre ellos los hermanos del proceso nuevo que acaba de ser cargado a ready, para cargarlos también
+                PCB * aux = new->head; // Puntero auxiliar para recorrer toda la cola new
+                while(aux)
+                {
+                  brother_pcb = extract_brother_process(new_pcb->UID, new_pcb->file_name, new);
+                  // Se le asigna la misma tmp que su hermano
+                  brother_pcb -> TMP = new_pcb ->TMP;
+                  brother_pcb -> TmpSize = new_pcb ->TmpSize;
+                  // Se carga el hermano también a listos
+                  enqueue(brother_pcb, ready);
+                  aux = aux -> next;
+                }
               }
             }
           }
-          else // Si aún hay procesos hermanos (al terminar un proceso)
+          else // Si aún hay al menos un proceso hermano encontrado en ready o execution (al terminar un proceso)
           {
             // Actualiza el PID en TMS para el hermano encontrado que sigue vivo
-            update_pages_from_tms(brother_pcb, tms);
+            update_pages_from_tms(brother_pcb, tms); 
           }
           // Se muestran los cambios en la tms
           print_tms(gui->inner_tms, *tms, *tms_disp);
