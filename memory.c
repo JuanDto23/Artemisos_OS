@@ -21,7 +21,7 @@ void create_swap(FILE **swap)
   }
 
   // Determinar el tamaño en bytes del archivo SWAP
-  size_t total_bytes = (size_t) (SWAP_SIZE * INSTRUCTION_SIZE);
+  size_t total_bytes = (size_t)(SWAP_SIZE * INSTRUCTION_SIZE);
 
   // Crear un bloque de memoria completo lleno de 0's
   int *buffer = (int *)malloc(total_bytes);
@@ -123,3 +123,23 @@ void load_to_swap(PCB *new_pcb, TMS *tms, FILE **swap, int lines, GUI *gui)
     fflush(*swap); // El contenido pendiente del búfer se vacía en el archivo
   }
 }
+
+// Marca como disponibles la páginas que ocupaba un proceso en la TMS, usando su TMP
+void free_pages_from_tms(PCB *pcb_finished, TMS *tms)
+{
+  for (int i = 0; i < pcb_finished->TmpSize; i++)
+  {
+    tms->table[pcb_finished->TMP[i]] = 0;
+    (tms->available_pages)++;
+  }
+}
+
+//Actualiza la tabla TMS con la UID de un proceso hermano
+void update_pages_from_tms(PCB *pcb_brother, TMS *tms)
+{
+  for (int i = 0; i < pcb_brother->TmpSize; i++)
+  {
+    tms->table[pcb_brother->TMP[i]] = pcb_brother->pid;
+  }
+}
+

@@ -27,5 +27,6 @@ void initialize_tms(TMS *tms);
 void get_available_pages(TMS *tms);
 void read_line_from_file(FILE *file, char *buffer);
 void load_to_swap(PCB *new_pcb, TMS *tms, FILE **swap, int lines, GUI *gui);
-
+void free_pages_from_tms(PCB *pcb_finished, TMS * tms);
+void update_pages_from_tms(PCB *pcb_brother, TMS * tms);
 #endif

@@ -227,16 +227,18 @@ void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp)
   // Posiciona el puntero de SWAP en la primera instrucción del marco n, en función del desplazamiento swap_disp
   fseek(swap, instructions_per_disp * INSTRUCTION_JUMP * swap_disp, SEEK_SET);
   
-  // Imprime las instrucciones de los 6 marcos conforme al desplazamiento
+  // Se imprimen las instrucciones de los 6 marcos conforme al desplazamiento
   for (int page = 0; page < DISPLAYED_PAGES_SWAP; page++) { // Recorrer paginas (columnas)
     // Evita imprimir mas marcos de los especificados
     if(swap_disp == TOTAL_DISP_SWAP && page == 4) break; 
     // Recorrer instrucciones (renglones)
     for(int instruction = 0; instruction < PAGE_SIZE; instruction++) { 
       fread(buffer, sizeof(char), INSTRUCTION_JUMP, swap); 
-      mvwprintw(inner_swap, instruction + 1, ((page + 1)*WIDTH_SWAP / 6) - 20, "[%04X] %s", (swap_disp*instructions_per_disp + page*PAGE_SIZE) | instruction, buffer); //Imprime las instrucciones guardadas en la SWAP junto con su direccion
+      // Imprime las instrucciones guardadas en la SWAP junto con su dirección
+      mvwprintw(inner_swap, instruction + 1, ((page + 1)*WIDTH_SWAP / 6) - 20, "[%04X] %.12s",(swap_disp*instructions_per_disp + page*PAGE_SIZE) | instruction, buffer); 
     }
   }
+  
   // Refresca subventana de swap
   wrefresh(inner_swap);
 }
@@ -269,7 +271,7 @@ void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp)
 {
   if (!pcb) return; // Si el PCB es nulo, no se imprime nada
 
-  // Se limpia la subventana de la TMS
+  // Se limpia la subventana de la TMP
   werase(inner_tmp);
 
   // Muestra el mensaje de "Mrc  EnSWAP"

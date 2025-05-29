@@ -275,7 +275,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
     else if (*c == KEY_DC) // Avanza TMP (supr)
     {
       // Total de desplazamientos de TMP
-      int total_disp_tmp = execution_pcb->TmpSize / (DISPLAYED_ADRESSES_TMP);
+      int total_disp_tmp = (execution_pcb) ? execution_pcb->TmpSize / (DISPLAYED_ADRESSES_TMP) : 0;
       if ((*tmp_disp) < total_disp_tmp)
       {
         (*tmp_disp)++;
@@ -284,19 +284,9 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
     }
     else if (*c == KEY_F(5)) // Retrocede RAM (F5)
     {
-      if (execution->elements > 0 && (*swap_disp) > 0)
-      {
-        (*swap_disp)--;
-      }
-      print_swap(gui->inner_swap, *swap, *swap_disp);
     }
     else if (*c == KEY_F(6)) // Avanza RAM (F6)
     {
-      if (execution->elements > 0 && (*swap_disp) < TOTAL_DISP_SWAP)
-      {
-        (*swap_disp)++;
-      }
-      print_swap(gui->inner_swap, *swap, *swap_disp);
     }
     else if (*c == KEY_F(7)) // Retrocede SWAP (F7)
     {
@@ -314,6 +304,7 @@ int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
       }
       print_swap(gui->inner_swap, *swap, *swap_disp);
     }
+
     else if (*c == ESC) // Acceso rápido para salir del programa con ESC
     {
       /* Se limpia área de mensajes con wclear para que redibuje todo
@@ -447,15 +438,33 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
           /* Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso
             del mismo usuario. Ya sea en Listos o en Ejecución */
           PCB *brother_pcb;
-          if ((brother_pcb = search_brother_process(new_pcb->UID, new_pcb->file_name, *execution)))
+          if ((brother_pcb = search_brother_process(new_pcb->UID, new_pcb->file_name, *execution))) // Brother en ejecución
           {
             // Asignar la misma TMP al nuevo proceso
             new_pcb->TMP = brother_pcb->TMP;
+            // Inserta el nodo en la cola Listos
+            enqueue(new_pcb, ready);
+            // Se imprime mensaje de proceso copiado
+            mvwprintw(gui->inner_msg, 0, 0, "Proceso: %d [%s] UID: [%d], encontrado en SWAP.", brother_pcb->pid, brother_pcb->file_name, brother_pcb->UID);
+            mvwprintw(gui->inner_msg, 1, 0, "Programa [%s] ya cargado. Se comparte TMP.", brother_pcb->file_name);
+            // Se cierra el archivo una vez que se ha cargado en la swap
+            fclose(file);
+            // Se evita puntero colgante
+            new_pcb->program = NULL;
           }
-          else if ((brother_pcb = search_brother_process(new_pcb->UID, new_pcb->file_name, *ready)))
+          else if ((brother_pcb = search_brother_process(new_pcb->UID, new_pcb->file_name, *ready))) // Brother en ready
           {
             // Asignar la misma TMP al nuevo proceso
             new_pcb->TMP = brother_pcb->TMP;
+            // Inserta el nodo en la cola Listos
+            enqueue(new_pcb, ready);
+            // Se imprime mensaje de proceso copiado
+            mvwprintw(gui->inner_msg, 0, 0, "Proceso: %d [%s] UID: [%d], encontrado en SWAP.", brother_pcb->pid, brother_pcb->file_name, brother_pcb->UID);
+            mvwprintw(gui->inner_msg, 1, 0, "Programa [%s] ya cargado. Se comparte TMP.", brother_pcb->file_name);
+            // Se cierra el archivo una vez que se ha cargado en la swap
+            fclose(file);
+            // Se evita puntero colgante
+            new_pcb->program = NULL;
           }
           // Flujo de acción para procesos sin hermanos
           // Verificar que el proceso sea de menor tamaño que la SWAP
@@ -501,10 +510,30 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
             // Se evita puntero colgante
             new_pcb->program = NULL;
           }
-          /* Se actualiza las impresiones de la SWAP y TMS 
-             dado que el nuevo proceso puede que se haya cargado en la SWAP */
+          /* Se actualiza las impresiones de la SWAP, TMS y Colas
+             dado que el nuevo proceso puede que se haya cargado en la SWAP o haya
+             pasado a Nuevos o Terminados */
           print_swap(gui->inner_swap, *swap, *swap_disp);
           print_tms(gui->inner_tms, *tms, *tms_disp);
+          print_queues(gui->inner_queues, *execution, *ready, *finished, *new);
+
+          if (ready->head && !execution->head)
+          {
+            // Se imprime mensaje de recalcular
+            mvwprintw(gui->inner_msg, 0, 0, "Recalculando prioridades del planificador...");
+            int minor_priority = get_minor_priority(*ready);
+            // Se imprime la menor prioridad encontrada
+            mvwprintw(gui->inner_msg, 1, 0, "Menor prioridad encontrada: [%d]", minor_priority);
+            // Se imprime el tiempo antes de continuar
+            mvwprintw(gui->inner_msg, 3, 0, "Tres segundos antes de continuar...");
+            // Se refresca la subventana de mensajes
+            wrefresh(gui->inner_msg);
+            // Se coloca el cursor en su lugar
+            wmove(gui->inner_prompt, 0, PROMPT_START);
+            // Refresca las ventana de inner_prompt
+            wrefresh(gui->inner_prompt);
+            sleep(3);
+          }
         }
         else // Si el archivo no existe
         {
@@ -540,15 +569,58 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
         PCB *pcb_extracted = extract_by_pid(pid_to_search, execution); // Hay 2 opciones, que el pcb a matar este en ejecución o en ready, comenzamos con ejecución
         if (pcb_extracted)                                             // El pcb se encontró en la cola de Ejecución
         {
-          // Es necesario cerrar el archivo antes de pasar a la cola de Ejecución
-          fclose(pcb_extracted->program);
-          // Evita puntero colgante
-          pcb_extracted->program = NULL;
           // Ya no es necesario buscar el usuario en la cola de Ejecución
           if (!search_uid(pcb_extracted->UID, *ready))
           {
             NumUs--;
           }
+
+          // Si no queda ningún proceso hermano
+          PCB *brother_pcb;
+          if (!(brother_pcb = search_brother_process(pcb_extracted->UID, pcb_extracted->file_name, *ready)))
+          {
+            // Establecer sus marcos de SWAP cómo libres en la TMS
+            free_pages_from_tms(pcb_extracted, tms);
+            // Liberar la memoria que ocupe la TMP asociada
+            free(pcb_extracted->TMP);
+            pcb_extracted->TMP = NULL;
+
+            // Si hay procesos en la lista Nuevos
+            if (new->head)
+            {
+              // Buscar por orden de llegada, algún proceso que sea de menor tamaño que la SWAP libre
+              // Mientras se encuentren procesos que se quepan en swap
+              PCB *new_pcb = search_process_smaller_swap(new, tms->available_pages);
+
+              if (new_pcb)
+              {
+                // Cargarlo a listos
+                enqueue(new_pcb, ready);
+                // Se imprime mensaje de proceso creado
+                mvwprintw(gui->inner_msg, 0, 0, "Proceso: %d [%s] UID: [%d]", new_pcb->pid, new_pcb->file_name, new_pcb->UID);
+                mvwprintw(gui->inner_msg, 1, 0, "Proceso nuevo cargado a la SWAP.");
+
+                // Se reserva espacio para la tmp del proceso
+                new_pcb->TMP = (int *)malloc(sizeof(int) * new_pcb->TmpSize);
+
+                // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
+                load_to_swap(new_pcb, tms, swap, new_pcb->lines, gui);
+
+                // Se cierra el archivo una vez que se ha cargado en la swap
+                fclose(new_pcb->program);
+                // Se evita puntero colgante
+                new_pcb->program = NULL;
+              }
+            }
+          }
+          else // Si aún hay procesos hermanos (al terminar un proceso)
+          {
+            // Actualiza el PID en TMS para el hermano encontrado que sigue vivo
+            update_pages_from_tms(brother_pcb, tms);
+          }
+          // Se muestran los cambios en la tms
+          print_tms(gui->inner_tms, *tms, *tms_disp);
+
           // Se actualiza el valor de W
           if (NumUs)
           {
@@ -574,15 +646,58 @@ int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Que
         }
         else if ((pcb_extracted = extract_by_pid(pid_to_search, ready))) // El pcb se encontró en la cola de Listos
         {
-          // Es necesario cerrar el archivo antes de pasar a la cola de Ejecución
-          fclose(pcb_extracted->program);
-          // Evita puntero colgante
-          pcb_extracted->program = NULL;
           // Se verifica si todavía hay procesos del mismo usuario
           if (!search_uid(pcb_extracted->UID, *ready) && !search_uid(pcb_extracted->UID, *execution))
           {
             NumUs--;
           }
+
+          PCB *brother_pcb;
+          if (!(brother_pcb = search_brother_process(pcb_extracted->UID, pcb_extracted->file_name, *ready)))
+          {
+            // Establecer sus marcos de SWAP cómo libres en la TMS
+            free_pages_from_tms(pcb_extracted, tms);
+            // Liberar la memoria que ocupe la TMP asociada
+            free(pcb_extracted->TMP);
+            pcb_extracted->TMP = NULL;
+
+            // Si hay procesos en la lista Nuevos
+            // Si hay procesos en la lista Nuevos
+            if (new->head)
+            {
+              // Buscar por orden de llegada, algún proceso que sea de menor tamaño que la SWAP libre
+              // Mientras se encuentren procesos que se quepan en swap
+              PCB *new_pcb = search_process_smaller_swap(new, tms->available_pages);
+
+              if (new_pcb)
+              {
+                // Cargarlo a listos
+                enqueue(new_pcb, ready);
+                // Se imprime mensaje de proceso creado
+                mvwprintw(gui->inner_msg, 0, 0, "Proceso: %d [%s] UID: [%d]", new_pcb->pid, new_pcb->file_name, new_pcb->UID);
+                mvwprintw(gui->inner_msg, 1, 0, "Proceso nuevo cargado a la SWAP.");
+
+                // Se reserva espacio para la tmp del proceso
+                new_pcb->TMP = (int *)malloc(sizeof(int) * new_pcb->TmpSize);
+
+                // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
+                load_to_swap(new_pcb, tms, swap, new_pcb->lines, gui);
+
+                // Se cierra el archivo una vez que se ha cargado en la swap
+                fclose(new_pcb->program);
+                // Se evita puntero colgante
+                new_pcb->program = NULL;
+              }
+            }
+          }
+          else // Si aún hay procesos hermanos (al terminar un proceso)
+          {
+            // Actualiza el PID en TMS para el hermano encontrado que sigue vivo
+            update_pages_from_tms(brother_pcb, tms);
+          }
+          // Se muestran los cambios en la tms
+          print_tms(gui->inner_tms, *tms, *tms_disp);
+
           // Se actualiza el valor de W
           if (NumUs)
           {

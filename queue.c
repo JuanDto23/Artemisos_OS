@@ -44,7 +44,7 @@ PCB *create_pcb(int pid, char *file_name, FILE **program, int uid, int TmpSize, 
     pcb->TMP = NULL;
     pcb->lines = lines;
   }
-  
+
   return pcb; // Se retorna el nodo creado
 }
 
@@ -102,7 +102,7 @@ void remove_pcb(PCB **pcb)
 }
 
 // Busca un PCB en la cola de acuerdo a su pid y lo extrae
-PCB * extract_by_pid(int pid, Queue *queue) // Busca el pcb con el id especificado y lo regresa
+PCB *extract_by_pid(int pid, Queue *queue) // Busca el pcb con el id especificado y lo regresa
 {
   PCB *current = NULL; // Nodo actual de la cola
   PCB *before = NULL;  // Nodo anterior al actual
@@ -207,7 +207,7 @@ int get_minor_priority(Queue queue)
   // Si la cola está vacía, se regresa 0
   if (!aux)
   {
-    return INT_MAX;  // Para que no pueda ser considerado como la menor prioridad
+    return INT_MAX; // Para que no pueda ser considerado como la menor prioridad
   }
 
   int min = aux->P; // Se considera la prioridad del primer nodo como la menor
@@ -217,7 +217,7 @@ int get_minor_priority(Queue queue)
   while (aux)
   {
     // Verifica si la prioridad del nodo actual es menor que la que se tiene almacenada
-    if (aux -> P < min)
+    if (aux->P < min)
     {
       min = aux->P; // Se actualiza la menor prioridad hasta el momento
     }
@@ -228,7 +228,7 @@ int get_minor_priority(Queue queue)
 }
 
 // Busca un PCB en la cola de acuerdo a su prioridad y lo extrae
-PCB * extract_by_priority(int priority, Queue *queue) // Busca el pcb con el id especificado y lo regresa
+PCB *extract_by_priority(int priority, Queue *queue) // Busca el pcb con el id especificado y lo regresa
 {
   PCB *current = NULL; // Nodo actual de la cola
   PCB *before = NULL;  // Nodo anterior al actual
@@ -291,11 +291,12 @@ void update_parameters(Queue *queue)
   // Se actualizan los parámetros de los nodos de la cola
 
   // 2 procesos de un usuario. W = 1
-  while (current) {
-    current -> KCPU /= 2;
-    current -> KCPUxU /= 2;
+  while (current)
+  {
+    current->KCPU /= 2;
+    current->KCPUxU /= 2;
     // Se deben actualizar todos al mismo tiempo???
-    current -> P = PBase + (current -> KCPU)/2  + (current -> KCPUxU)/(4 * W);
+    current->P = PBase + (current->KCPU) / 2 + (current->KCPUxU) / (4 * W);
     current = current->next; // Se avanza al siguiente nodo
   }
 }
@@ -326,7 +327,7 @@ int get_KCPUxU(int uid, Queue queue)
 
 // Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso del mismo usuario.
 // De ser así se regresa el pid del primer proceso hermano para asignarle su misma TMP
-PCB * search_brother_process(int uid, char *filename, Queue queue)
+PCB *search_brother_process(int uid, char *filename, Queue queue)
 {
   PCB *current = NULL;
   int found = FALSE;
@@ -347,4 +348,27 @@ PCB * search_brother_process(int uid, char *filename, Queue queue)
     return current; // Se encontró el nodo hermano en la cola
   }
   return FALSE; // La cola está vacía o no se encontró el archivo
+}
+
+PCB *search_process_smaller_swap(Queue *new, int available_pages)
+{
+  PCB *current = NULL;
+  int found = FALSE;
+
+  current = new->head;
+  while (current && !found)
+  {
+    // Se comprueba que el proceso quepa en la SWAP
+    found = (current->TmpSize <= available_pages);
+    if (!found)
+    {
+      // Se avanza al siguiente nodo de la lista
+      current = current->next;
+    }
+  }
+  if (current)
+  {
+    return extract_by_pid(current->pid, new); // Se encontró el proceso que cabe en la SWAP
+  }
+  return NULL; // La cola está vacía o no se encontró ningún proceso a cargar desde nuevos
 }
