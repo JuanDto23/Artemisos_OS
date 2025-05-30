@@ -394,5 +394,5 @@ PCB * extract_brother_process(int uid, char *filename, Queue * queue)
   {
     return extract_by_pid(current->pid, queue); // Se encontró el nodo hermano en la cola
   }
-  return FALSE; // La cola está vacía o no se encontró el archivo
+  return FALSE; // La cola está vacía o no se encontró otro proceso hermano
 }

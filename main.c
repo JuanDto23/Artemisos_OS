@@ -143,11 +143,14 @@ int main(void)
                 while(aux)
                 {
                   brother_pcb = extract_brother_process(new_pcb->UID, new_pcb->file_name, &new);
-                  // Se le asigna la misma tmp que su hermano
-                  brother_pcb -> TMP = new_pcb ->TMP;
-                  brother_pcb -> TmpSize = new_pcb ->TmpSize;
-                  // Se carga el hermano también a listos
-                  enqueue(brother_pcb, &ready);
+                  // Si se encontró un hermano se le asigna la misma tmp que su hermano
+                  if(brother_pcb)
+                  {
+                    brother_pcb -> TMP = new_pcb ->TMP;
+                    brother_pcb -> TmpSize = new_pcb ->TmpSize;
+                    // Se carga el hermano también a listos
+                    enqueue(brother_pcb, &ready);
+                  }
                   aux = aux -> next;
                 }
               }
@@ -262,11 +265,14 @@ int main(void)
                   while(aux)
                   {
                     brother_pcb = extract_brother_process(new_pcb->UID, new_pcb->file_name, &new);
-                    // Se le asigna la misma tmp que su hermano
-                    brother_pcb -> TMP = new_pcb ->TMP;
-                    brother_pcb -> TmpSize = new_pcb ->TmpSize;
-                    // Se carga el hermano también a listos
-                    enqueue(brother_pcb, &ready);
+                    // Si se encontró un hermano se le asigna la misma tmp que su hermano
+                    if(brother_pcb)
+                    {
+                      brother_pcb -> TMP = new_pcb ->TMP;
+                      brother_pcb -> TmpSize = new_pcb ->TmpSize;
+                      // Se carga el hermano también a listos
+                      enqueue(brother_pcb, &ready);
+                    }
                     aux = aux -> next;
                   }
                 }
