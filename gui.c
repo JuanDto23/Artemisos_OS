@@ -98,31 +98,34 @@ void print_prompt(WINDOW *inner_prompt, int row)
 }
 
 // Imprime los parámetros del proceso que se encuentre en ejecución
-void print_processor(WINDOW *inner_cpu, PCB pcb)
+void print_processor(WINDOW *inner_cpu, PCB *pcb)
 {
+  if (!pcb)
+    return;
+
   // Se limpia la subventana del CPU
   werase(inner_cpu);
   // Parte izquierda
-  mvwprintw(inner_cpu, 0, 0, "AX:[%ld]", pcb.AX);
-  mvwprintw(inner_cpu, 1, 0, "BX:[%ld]", pcb.BX);
-  mvwprintw(inner_cpu, 2, 0, "CX:[%ld]", pcb.CX);
-  mvwprintw(inner_cpu, 3, 0, "DX:[%ld]", pcb.DX);
-  mvwprintw(inner_cpu, 4, 0, "P:[%d]", pcb.P);
-  mvwprintw(inner_cpu, 5, 0, "KCPU:[%d]", pcb.KCPU);
+  mvwprintw(inner_cpu, 0, 0, "AX:[%ld]", pcb->AX);
+  mvwprintw(inner_cpu, 1, 0, "BX:[%ld]", pcb->BX);
+  mvwprintw(inner_cpu, 2, 0, "CX:[%ld]", pcb->CX);
+  mvwprintw(inner_cpu, 3, 0, "DX:[%ld]", pcb->DX);
+  mvwprintw(inner_cpu, 4, 0, "P:[%d]", pcb->P);
+  mvwprintw(inner_cpu, 5, 0, "KCPU:[%d]", pcb->KCPU);
   // Parte derecha
-  mvwprintw(inner_cpu, 0, WIDTH_CPU / 2, "PC:[%d]=[0x%04X] ", pcb.PC, pcb.PC);
-  mvwprintw(inner_cpu, 1, WIDTH_CPU / 2, "IR:[%s]", pcb.IR);
-  mvwprintw(inner_cpu, 2, WIDTH_CPU / 2, "PID:[%d]", pcb.pid);
-  mvwprintw(inner_cpu, 3, WIDTH_CPU / 2, "NAME:[%s]", pcb.file_name);
-  mvwprintw(inner_cpu, 4, WIDTH_CPU / 2, "UID:[%d]", pcb.UID);
-  mvwprintw(inner_cpu, 5, WIDTH_CPU / 2, "KCPUxU:[%d]", pcb.KCPUxU);
+  mvwprintw(inner_cpu, 0, WIDTH_CPU / 2, "PC:[%d]=[0x%04X] ", pcb->PC, pcb->PC);
+  mvwprintw(inner_cpu, 1, WIDTH_CPU / 2, "IR:[%s]", pcb->IR);
+  mvwprintw(inner_cpu, 2, WIDTH_CPU / 2, "PID:[%d]", pcb->pid);
+  mvwprintw(inner_cpu, 3, WIDTH_CPU / 2, "NAME:[%s]", pcb->file_name);
+  mvwprintw(inner_cpu, 4, WIDTH_CPU / 2, "UID:[%d]", pcb->UID);
+  mvwprintw(inner_cpu, 5, WIDTH_CPU / 2, "KCPUxU:[%d]", pcb->KCPUxU);
 
   // Refrescar subventana del CPU
   wrefresh(inner_cpu);
 }
 
 // Imprime los procesos de las colas
-void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue finished, Queue new)
+void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new, Queue finished)
 {
   // Se limpia la subventana de las Colas
   werase(inner_queues);
@@ -201,10 +204,12 @@ void print_ginfo(WINDOW *inner_ginfo, Queue execution)
 
   mvwprintw(inner_ginfo, 0, (WIDTH_GINFO / 3) - 25, "Usuarios:[%d]", NumUs);
   // Se valida que haya algo en ejecución
-  if (execution.head) {
+  if (execution.head)
+  {
     mvwprintw(inner_ginfo, 0, ((2 * WIDTH_GINFO) / 3) - 25, "MinP:[%d]", execution.head->P);
   }
-  else {
+  else
+  {
     mvwprintw(inner_ginfo, 0, ((2 * WIDTH_GINFO) / 3) - 25, "MinP:[%d]", 0);
   }
   mvwprintw(inner_ginfo, 0, WIDTH_GINFO - 25, "W:[%.2f]", W);
@@ -217,28 +222,31 @@ void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp)
 {
   // Se limpia la subventana de Información General de la SWAP
   werase(inner_swap);
-  
+
   // Muestra información general fija de la SWAP
   mvwprintw(inner_swap, 0, (WIDTH_SWAP - strlen("[65536] Inst en [4096] Marcos de [16] Inst de [32] Bytes c/u = [2097152] Bytes")) / 2, "[65536] Inst en [4096] Marcos de [16] Inst de [32] Bytes c/u = [2097152] Bytes");
 
   int instructions_per_disp = PAGE_SIZE * DISPLAYED_PAGES_SWAP; // Instrucciones que llenan toda una ventana de SWAP
-  char buffer[INSTRUCTION_SIZE] = {0}; // Buffer que almacena instrucción leída desde archivo SWAP
-  
+  char buffer[INSTRUCTION_SIZE] = {0};                          // Buffer que almacena instrucción leída desde archivo SWAP
+
   // Posiciona el puntero de SWAP en la primera instrucción del marco n, en función del desplazamiento swap_disp
   fseek(swap, instructions_per_disp * INSTRUCTION_JUMP * swap_disp, SEEK_SET);
-  
+
   // Se imprimen las instrucciones de los 6 marcos conforme al desplazamiento
-  for (int page = 0; page < DISPLAYED_PAGES_SWAP; page++) { // Recorrer paginas (columnas)
+  for (int page = 0; page < DISPLAYED_PAGES_SWAP; page++)
+  { // Recorrer paginas (columnas)
     // Evita imprimir mas marcos de los especificados
-    if(swap_disp == TOTAL_DISP_SWAP && page == 4) break; 
+    if (swap_disp == TOTAL_DISP_SWAP && page == 4)
+      break;
     // Recorrer instrucciones (renglones)
-    for(int instruction = 0; instruction < PAGE_SIZE; instruction++) { 
-      fread(buffer, sizeof(char), INSTRUCTION_JUMP, swap); 
+    for (int instruction = 0; instruction < PAGE_SIZE; instruction++)
+    {
+      fread(buffer, sizeof(char), INSTRUCTION_JUMP, swap);
       // Imprime las instrucciones guardadas en la SWAP junto con su dirección
-      mvwprintw(inner_swap, instruction + 1, ((page + 1)*WIDTH_SWAP / 6) - 20, "[%04X] %.12s",(swap_disp*instructions_per_disp + page*PAGE_SIZE) | instruction, buffer); 
+      mvwprintw(inner_swap, instruction + 1, ((page + 1) * WIDTH_SWAP / 6) - 20, "[%04X] %.12s", (swap_disp * instructions_per_disp + page * PAGE_SIZE) | instruction, buffer);
     }
   }
-  
+
   // Refresca subventana de swap
   wrefresh(inner_swap);
 }
@@ -250,13 +258,13 @@ void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp)
   werase(inner_tms);
 
   // Muestra el mensaje de "Marco-PID"
-  mvwprintw(inner_tms,0, 0, "Marco-PID");
+  mvwprintw(inner_tms, 0, 0, "Marco-PID");
 
   // Se localiza el índice de la tabla tms según el número de desplazamiento
   int index_tms = tms_disp * DISPLAYED_PAGES_TMS;
 
   // Imprime las páginas de la TMS conforme al desplazamiento
-  for(int page = 0; page < DISPLAYED_PAGES_TMS; page++)
+  for (int page = 0; page < DISPLAYED_PAGES_TMS; page++)
   {
     mvwprintw(inner_tms, page + 1, 0, "%03X - %d", index_tms, tms.table[index_tms]);
     index_tms++;
@@ -269,13 +277,19 @@ void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp)
 // Imprime el contenido de la TMP con desplazamiento
 void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp)
 {
-  if (!pcb) return; // Si el PCB es nulo, no se imprime nada
-
   // Se limpia la subventana de la TMP
   werase(inner_tmp);
 
   // Muestra el mensaje de "Mrc  EnSWAP"
   mvwprintw(inner_tmp, 0, 0, "Mrc  EnSWAP");
+
+  // Si el PCB es nulo, no se imprime nada y se limpió la lsita de direcciones
+  if (!pcb)
+  {
+    // Refresca la subventana de TMP
+    wrefresh(inner_tmp);
+    return;
+  }
 
   // Se localiza el índice de la tabla TMP según el número de desplazamiento
   int index_tmp = tmp_disp * (DISPLAYED_ADRESSES_TMP);
@@ -291,17 +305,32 @@ void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp)
   wrefresh(inner_tmp);
 }
 
+// Imprime el historial de comandos en la subventana de prompt
+void print_history(char buffers[HISTORY_SIZE][PROMPT_SIZE], WINDOW *inner_prompt)
+{
+  // Se imprimen los buffers de historial
+  for (int i = 1; i < HISTORY_SIZE; i++)
+  {
+    if (buffers[i][0] != 0) // Si el buffer no está vacío
+    {
+      clear_prompt(inner_prompt, i);
+      print_prompt(inner_prompt, i);
+      mvwprintw(inner_prompt, i, PROMPT_START, "%s", buffers[i]);
+    }
+  }
+}
+
 // Se imprime el procesador vacío
 void empty_processor(WINDOW *inner_cpu)
 {
   PCB empty_pcb = {0}; // Inicializa todos los campos del PCB a 0 o valores equivalentes
-  print_processor(inner_cpu, empty_pcb);
+  print_processor(inner_cpu, &empty_pcb);
 }
 
 // Se limpia la línea de prompt que se especifique
 void clear_prompt(WINDOW *inner_prompt, int row)
 {
-  for (int i = 0; i < BUFFER_SIZE; i++)
+  for (int i = 0; i < PROMPT_SIZE; i++)
   {
     mvwaddch(inner_prompt, row, PROMPT_START + i, ' ');
   }

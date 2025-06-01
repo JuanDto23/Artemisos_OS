@@ -1,35 +1,16 @@
 #ifndef _PCB_H
 #define _PCB_H
 
-#include "memory.h"
+#include "memory.h" // Para INSTRUCTION_SIZE
 
-// Declaración adelantada de Queue y GUI
+// Definiciones adelantadas de tipos
 typedef struct queue Queue;
 typedef struct gui GUI;
-
-// Valores numéricos obtenidos de kbwhat.c
-#define ENTER 10
-#define ESC 27
-
-// Número de buffers, tamaño de buffer y tamaño de línea
-#define NUMBER_BUFFERS 3
-#define BUFFER_SIZE 66
-#define PROMPT_START 12
-
-// Valores booleanos
-#define TRUE 1
-#define FALSE 0
-
-// Intervalo de tiempo antes de la siguiente instrucción
-#define MAX_TIME 500000
-
-// Número máximo de niveles
-#define MAX_LEVEL 15
 
 /* Sirve de referencia para indicar la cantidad
    máxima de instrucciones consecutivas que se
    podrán ejecutar por cada proceso */
-#define MAXQUANTUM 4
+#define MAXQUANTUM 5
 
 // Creación del bloque de control de procesos
 typedef struct pcb
@@ -63,30 +44,20 @@ extern int IncCPU;
 extern double W;
 extern const int PBase;
 
-/*-------------------PROTOTIPOS -------------------*/
+// Funciones de actualización de parámetros de planificación
+void update_KCPUxU_per_process(int uid, Queue *queue);
+void update_parameters(Queue *queue);
+void update_users(int uid, Queue queue);
 
-// FUNCIONES DE INICIALIZACIÓN
-void initialize_buffer(char *buffer, int *index);
-
-// FUNCIONES AUXILIARES
-void str_upper(char *str);
-int is_numeric(char *str);
+// Funciones para la interpretación de instrucciones leídas de un proceso
 int search_register(char *p);
 int value_register(PCB *pcb, char r);
-int end_simulation(WINDOW *inner_msg);
-void print_history(char buffers[NUMBER_BUFFERS][BUFFER_SIZE], WINDOW *inner_prompt);
-int count_lines(FILE *file);
-
-// FUNCIONES PRINCIPALES
-int command_handling(GUI *gui, char buffers[NUMBER_BUFFERS][BUFFER_SIZE],
-                     int *c, int *index, int *index_history,
-                     Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE ** swap,
-                     int *swap_disp, int *tms_disp, int * tmp_disp, PCB *execution_pcb);
-
-int evaluate_command(GUI *gui, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     TMS * tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp);
-
-void read_line_from_swap(FILE *swap, char *line, PCB *execution_pcb);
 int interpret_instruction(GUI *gui, char *line, PCB *pcb);
+
+// Función para la gestión de un proceso cuando termina
+void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution, Queue *ready,
+                                Queue *new, TMS *tms, int tms_disp, FILE **swap);
+
+// Función para recalcular prioridades
+void recalculate_priorities(GUI *gui, Queue ready, int *minor_priority);
 #endif

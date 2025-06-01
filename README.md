@@ -7,4 +7,4 @@ Para la instalación de ncurses en Linux, puede visitar el siguiente enlace:
 (https://www.cyberciti.biz/faq/linux-install-ncurses-library-headers-on-debian-ubuntu-centos-fedora/)
 
 El comando de compilación, utilizando el compilador de C y C++ del proyecto GNU, es:
-```gcc main.c pcb.c queue.c gui.c memory.c -o pcb.out -Wall -lncurses -lm```
+```gcc main.c pcb.c queue.c gui.c memory.c prompt.c utils.c -o pcb.out -Wall -lncurses -lm```

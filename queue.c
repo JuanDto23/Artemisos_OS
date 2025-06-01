@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <ncurses.h>
-#include <limits.h> // Para usar el int_max
+#include <limits.h>
+#include <stdbool.h>
 // Bibliotecas propias
 #include "queue.h"
 #include "pcb.h" // Se ocupa para la variable PBase
@@ -101,12 +102,47 @@ void remove_pcb(PCB **pcb)
   }
 }
 
+// Elimina la cola de procesos
+void kill_queue(Queue *queue)
+{
+  while (queue->head)
+  {
+    PCB *temp = queue->head;
+    queue->head = queue->head->next; // La cabecera almacena el nodo adelante
+    remove_pcb(&temp);
+  }
+}
+
+// Libera las colas de Ejecución, Listos y Terminados
+void free_queues(Queue *execution, Queue *ready, Queue *finished)
+{
+  // Se liberan las colas de Ejecución y Listos
+  kill_queue(execution);
+  kill_queue(ready);
+  /*
+   * No se invoca kill_queue(finished) porque
+   * la función kill_queue cierra los archivos
+   * de los nodos, y en la cola Terminados, se
+   * supone que el archivo de cada nodo ya se
+   * encuentra cerrado.
+   *
+   * Por lo tanto, se recorre la cola Terminados
+   * donde solo se hace uso de la función free
+   * para liberar cada pcb. */
+  while (finished->head)
+  {
+    PCB *temp = finished->head;
+    finished->head = finished->head->next;
+    free(temp);
+  }
+}
+
 // Busca un PCB en la cola de acuerdo a su pid y lo extrae
 PCB *extract_by_pid(int pid, Queue *queue) // Busca el pcb con el id especificado y lo regresa
 {
   PCB *current = NULL; // Nodo actual de la cola
   PCB *before = NULL;  // Nodo anterior al actual
-  int found = FALSE;   // Indica si se encontró el nodo
+  int found = false;   // Indica si se encontró el nodo
 
   // Se inicializan los nodos auxiliares
   current = queue->head;
@@ -140,28 +176,17 @@ PCB *extract_by_pid(int pid, Queue *queue) // Busca el pcb con el id especificad
   return NULL; // La cola está vacía
 }
 
-// Elimina la cola de procesos
-void kill_queue(Queue *queue)
-{
-  while (queue->head)
-  {
-    PCB *temp = queue->head;
-    queue->head = queue->head->next; // La cabecera almacena el nodo adelante
-    remove_pcb(&temp);
-  }
-}
-
-// Verifica si el usuario es dueño de un proceso en la cola pasada como parámetro
-int search_uid(int uid, Queue queue)
+// Extrae un proceso hermano de la cola de acuerdo a su UID y nombre de archivo
+PCB *extract_brother_process(int uid, char *filename, Queue *queue)
 {
   PCB *current = NULL;
-  int found = FALSE;
+  int found = false;
 
-  current = queue.head;
+  current = queue->head;
   while (current && !found)
   {
-    // Se comprueba que el id usuario coincida con el dueño del nodo actual
-    found = (current->UID == uid);
+    // Se comprueba que el archivo y el id usuario coincidan con el dueño del nodo actual
+    found = !strcmp(current->file_name, filename) && (current->UID == uid);
     if (!found)
     {
       // Se avanza al siguiente nodo de la lista
@@ -170,61 +195,9 @@ int search_uid(int uid, Queue queue)
   }
   if (current)
   {
-    return TRUE; // Se encontró el usuario en la cola
+    return extract_by_pid(current->pid, queue); // Se encontró el nodo hermano en la cola
   }
-  return FALSE; // La cola está vacía o no se encontró el usuario
-}
-
-// Libera las colas de Ejecución, Listos y Terminados
-void free_queues(Queue *execution, Queue *ready, Queue *finished)
-{
-  // Se liberan las colas de Ejecución y Listos
-  kill_queue(execution);
-  kill_queue(ready);
-  /*
-   * No se invoca kill_queue(finished) porque
-   * la función kill_queue cierra los archivos
-   * de los nodos, y en la cola Terminados, se
-   * supone que el archivo de cada nodo ya se
-   * encuentra cerrado.
-   *
-   * Por lo tanto, se recorre la cola Terminados
-   * donde solo se hace uso de la función free
-   * para liberar cada pcb. */
-  while (finished->head)
-  {
-    PCB *temp = finished->head;
-    finished->head = finished->head->next;
-    free(temp);
-  }
-}
-
-// Busca la menor prioridad entre todos los procesos de la cola
-int get_minor_priority(Queue queue)
-{
-  PCB *aux = queue.head; // Nodo auxiliar para recorrer la cola
-
-  // Si la cola está vacía, se regresa 0
-  if (!aux)
-  {
-    return INT_MAX; // Para que no pueda ser considerado como la menor prioridad
-  }
-
-  int min = aux->P; // Se considera la prioridad del primer nodo como la menor
-
-  /* Se recorre la cola y va verificando si hay una menor prioridad
-   que la que se consideró inicialmente */
-  while (aux)
-  {
-    // Verifica si la prioridad del nodo actual es menor que la que se tiene almacenada
-    if (aux->P < min)
-    {
-      min = aux->P; // Se actualiza la menor prioridad hasta el momento
-    }
-    aux = aux->next; // Se avanza al siguiente nodo
-  }
-
-  return min; // Se retorna la menor proridad
+  return NULL; // La cola está vacía o no se encontró otro proceso hermano
 }
 
 // Busca un PCB en la cola de acuerdo a su prioridad y lo extrae
@@ -232,7 +205,7 @@ PCB *extract_by_priority(int priority, Queue *queue) // Busca el pcb con el id e
 {
   PCB *current = NULL; // Nodo actual de la cola
   PCB *before = NULL;  // Nodo anterior al actual
-  int found = FALSE;   // Indica si se encontró el nodo
+  int found = false;   // Indica si se encontró el nodo
 
   // Se inicializan los nodos auxiliares
   current = queue->head;
@@ -266,46 +239,11 @@ PCB *extract_by_priority(int priority, Queue *queue) // Busca el pcb con el id e
   return NULL; // La cola está vacía, o se llegó al final sin encontrarlo
 }
 
-// Actualiza los contadores de uso del CPU para todos los procesos (no Terminados) del usuario dueño del proceso de la cola
-void update_KCPUxU_per_process(int uid, Queue *queue)
-{
-  PCB *current = queue->head; // Nodo actual
-
-  // Se actualiza KCPUxU de cada proceso de la cola que sea del usuario UID
-  while (current)
-  {
-    // El proceso es del usuario UID
-    if (current->UID == uid)
-    {
-      current->KCPUxU += IncCPU; // Se actualiza KCPUxU
-    }
-    current = current->next; // Se avanza al siguiente nodo
-  }
-}
-
-// Actualiza los parámetros de planificación, para todos los nodos de la cola
-void update_parameters(Queue *queue)
-{
-  PCB *current = queue->head; // Nodo actual
-
-  // Se actualizan los parámetros de los nodos de la cola
-
-  // 2 procesos de un usuario. W = 1
-  while (current)
-  {
-    current->KCPU /= 2;
-    current->KCPUxU /= 2;
-    // Se deben actualizar todos al mismo tiempo???
-    current->P = PBase + (current->KCPU) / 2 + (current->KCPUxU) / (4 * W);
-    current = current->next; // Se avanza al siguiente nodo
-  }
-}
-
-// Obtiene el KCPUxU del primer proceso del usuario especificado que encuentre
-int get_KCPUxU(int uid, Queue queue)
+// Verifica si el usuario con uid tiene algún proceso en la cola
+int is_user_in_queue(int uid, Queue queue)
 {
   PCB *current = NULL;
-  int found = FALSE;
+  int found = false;
 
   current = queue.head;
   while (current && !found)
@@ -320,13 +258,36 @@ int get_KCPUxU(int uid, Queue queue)
   }
   if (current)
   {
-    return current->KCPUxU; // Se encontró el usuario en la cola
+    return true; // Se encontró el usuario en la cola
   }
-  return -1; // La cola está vacía o no se encontró el usuario
+  return false; // La cola está vacía o no se encontró el usuario
 }
 
-// Buscar si el programa, ya se encuentra previamente cargado por algún otro proceso del mismo usuario.
-// De ser así se regresa el pid del primer proceso hermano para asignarle su misma TMP
+// Busca el primer proceso que encaje en la SWAP y extrae el nodo
+PCB *search_process_fits_swap(Queue *new, int available_pages)
+{
+  PCB *current = NULL;
+  int found = false;
+
+  current = new->head;
+  while (current && !found)
+  {
+    // Se comprueba que el proceso quepa en la SWAP
+    found = (current->TmpSize <= available_pages);
+    if (!found)
+    {
+      // Se avanza al siguiente nodo de la lista
+      current = current->next;
+    }
+  }
+  if (current)
+  {
+    return extract_by_pid(current->pid, new); // Se encontró el proceso que cabe en la SWAP
+  }
+  return NULL; // La cola está vacía o no se encontró ningún proceso a cargar desde nuevos
+}
+
+// Busca un proceso hermano en la cola de acuerdo a su UID y nombre de archivo y regresa el nodo sin extraerlo
 PCB *search_brother_process(int uid, char *filename, Queue queue)
 {
   PCB *current = NULL;
@@ -347,19 +308,48 @@ PCB *search_brother_process(int uid, char *filename, Queue queue)
   {
     return current; // Se encontró el nodo hermano en la cola
   }
-  return FALSE; // La cola está vacía o no se encontró el archivo
+  return NULL; // La cola está vacía o no se encontró otro proceso hermano
 }
 
-PCB *search_process_smaller_swap(Queue *new, int available_pages)
+// Busca la menor prioridad entre todos los procesos de la cola
+int get_minor_priority(Queue queue)
+{
+  PCB *aux = queue.head; // Nodo auxiliar para recorrer la cola
+
+  // Si la cola está vacía, se regresa 0
+  if (!aux)
+  {
+    return 0; // Para que no pueda ser considerado como la menor prioridad
+  }
+
+  int min = aux->P; // Se considera la prioridad del primer nodo como la menor
+
+  /* Se recorre la cola y va verificando si hay una menor prioridad
+   que la que se consideró inicialmente */
+  while (aux)
+  {
+    // Verifica si la prioridad del nodo actual es menor que la que se tiene almacenada
+    if (aux->P < min)
+    {
+      min = aux->P; // Se actualiza la menor prioridad hasta el momento
+    }
+    aux = aux->next; // Se avanza al siguiente nodo
+  }
+
+  return min; // Se retorna la menor proridad
+}
+
+// Obtiene el KCPUxU del primer proceso del usuario especificado que encuentre
+int get_KCPUxU(int uid, Queue queue)
 {
   PCB *current = NULL;
-  int found = FALSE;
+  int found = false;
 
-  current = new->head;
+  current = queue.head;
   while (current && !found)
   {
-    // Se comprueba que el proceso quepa en la SWAP
-    found = (current->TmpSize <= available_pages);
+    // Se comprueba que el id usuario coincida con el dueño del nodo actual
+    found = (current->UID == uid);
     if (!found)
     {
       // Se avanza al siguiente nodo de la lista
@@ -368,31 +358,7 @@ PCB *search_process_smaller_swap(Queue *new, int available_pages)
   }
   if (current)
   {
-    return extract_by_pid(current->pid, new); // Se encontró el proceso que cabe en la SWAP
+    return current->KCPUxU; // Se encontró el usuario en la cola
   }
-  return NULL; // La cola está vacía o no se encontró ningún proceso a cargar desde nuevos
-}
-
-// Buscar en new, procesos hermanos del proceso nuevo que se cargó a la swap (ready)
-PCB * extract_brother_process(int uid, char *filename, Queue * queue)
-{
-  PCB *current = NULL;
-  int found = FALSE;
-
-  current = queue->head;
-  while (current && !found)
-  {
-    // Se comprueba que el archivo y el id usuario coincidan con el dueño del nodo actual
-    found = !strcmp(current->file_name, filename) && (current->UID == uid);
-    if (!found)
-    {
-      // Se avanza al siguiente nodo de la lista
-      current = current->next;
-    }
-  }
-  if (current)
-  {
-    return extract_by_pid(current->pid, queue); // Se encontró el nodo hermano en la cola
-  }
-  return FALSE; // La cola está vacía o no se encontró otro proceso hermano
+  return -1; // La cola está vacía o no se encontró el usuario
 }

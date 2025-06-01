@@ -1,7 +1,9 @@
 #ifndef _GUI_H
 #define _GUI_H
 
-// Declaración adelantada de PCB y Queue
+#include "prompt.h" // Para las macros HISTORY_SIZE y PROMPT_SIZE
+
+// Definiciones adelantadas de tipos
 typedef struct pcb PCB;
 typedef struct queue Queue;
 typedef struct tms TMS;
@@ -92,15 +94,23 @@ typedef struct gui
   WINDOW *inner_keys;
 }GUI;
 
+// Función para inicializar la GUI
 void initialize_gui(GUI *gui);
+
+// Funciones para imprimir contenido en las subventanas de la GUI
 void print_prompt(WINDOW *inner_prompt, int row);
-void print_processor(WINDOW *inner_cpu, PCB pcb);
-void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue finished, Queue new);
+void print_processor(WINDOW *inner_cpu, PCB *pcb);
+void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new, Queue finished);
 void print_ginfo(WINDOW *inner_ginfo, Queue execution);
 void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp);
 void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp);
 void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp);
+void print_history(char buffers[HISTORY_SIZE][PROMPT_SIZE], WINDOW *inner_prompt);
+
+// Función para imprimir procesador vacío
 void empty_processor(WINDOW *inner_cpu);
+
+// Función para limpiar una línea especifica de la prompt
 void clear_prompt(WINDOW *inner_prompt, int row);
 
 #endif

@@ -1,7 +1,8 @@
 #ifndef _MEMORY_H
 #define _MEMORY_H
 
-// Definición adelantada del PCB
+// Definiciones adelantadas de tipos
+typedef struct queue Queue;
 typedef struct pcb PCB;
 typedef struct gui GUI;
 
@@ -22,11 +23,25 @@ typedef struct tms
   int available_pages;
 } TMS;
 
+// Función para crear un archivo de memoria de intercambio (SWAP)
 void create_swap(FILE **swap);
+
+// Función para inicializar la tabla de memoria swap (TMS)
 void initialize_tms(TMS *tms);
-void get_available_pages(TMS *tms);
+
+// Funciones para leer desde un archivo o desde la SWAP
 void read_line_from_file(FILE *file, char *buffer);
-void load_to_swap(PCB *new_pcb, TMS *tms, FILE **swap, int lines, GUI *gui);
+void read_inst_from_swap(FILE *swap, char *line, PCB *execution_pcb);
+
+// Función para cargar instrucciones en la SWAP y registrar en TMS los marcos ocupados por el proceso
+void load_to_swap(PCB *new_process, TMS *tms, FILE **swap, int lines);
+
+// Función para cargar un proceso a la cola de Listos
+void load_to_ready(PCB *process, Queue *ready, TMS *tms, FILE **swap);
+
+// Función para liberar las páginas ocupadas por un proceso en la TMS
 void free_pages_from_tms(PCB *pcb_finished, TMS * tms);
-void update_pages_from_tms(PCB *pcb_brother, TMS * tms);
+
+// Función para actualizar las páginas ocupadas por un proceso hermano en la TMS
+void update_pages_from_tms(PCB *brother_process, TMS * tms);
 #endif
