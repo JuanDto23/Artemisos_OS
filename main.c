@@ -198,7 +198,6 @@ void run_simulator(void)
           /* Se reinicia para comenzar a ejecutar
           el siguiente proceso o el mismo si no hay más */
           quantum = 0;
-          // Se reinicia
         }
       }
       timer = init_timer;                                              // Se reinicializa temporizador para volver a escribir en línea de comandos

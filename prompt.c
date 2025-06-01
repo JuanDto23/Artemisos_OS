@@ -410,11 +410,6 @@ void kill_command(char *parameter1, Queue *execution, Queue *ready, Queue *new, 
     // Se imprime procesador vacío y se muestra mensaje
     empty_processor(gui->inner_cpu);
     mvwprintw(gui->inner_msg, 3, 0, "El process con pid [%d] ha sido terminado.", pid_to_search);
-    /* Si solo había un proceso en Ejecución y nada en Listos,
-       se debe de refrescar la impresión de las colas para que
-       se vea que el proceso está en la cola Finalizados */
-    if (!ready->head)
-      print_queues(gui->inner_queues, *execution, *ready, *new, *finished);
   }
   // El proceso se encontró en la cola de Listos
   else if ((process_extracted = extract_by_pid(pid_to_search, ready)))
