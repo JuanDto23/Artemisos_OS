@@ -59,7 +59,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
       evaluate_command(gui, exited, buffers[0], execution, ready, finished,
-                       new, tms, swap, swap_disp, tms_disp, tmp_disp);
+                       new, tms, swap, swap_disp, tms_disp, tmp_disp, lists_disp);
       // Se crea historial
       create_history(gui, buffers, index, index_history);
       // Se imprimen los buffers de historial
@@ -167,11 +167,23 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
       }
       print_tmp(gui->inner_tmp, execution_pcb, *tmp_disp);
     }
-    else if (c == KEY_F(1)) // Retrocede Colas (F1)
-    {  
+     else if (c == KEY_F(1)) // Retrocede Colas (F1)
+    {
+      if ((*lists_disp) > 0)
+      {
+        (*lists_disp)--;
+      }
+      print_queues(gui->inner_queues, execution, ready, new, finished, *lists_disp);
     }
     else if (c == KEY_F(2)) // Avanza Colas (F2)
     {
+      // Se calcula el total de deslazamientos de la ventana de colas en función de los elementos que haya
+      int total_lists_disp = (execution->elements + ready->elements + new->elements + finished->elements + 4) / (HEIGHT_QUEUES - 2);
+      if ((*lists_disp) < total_lists_disp)
+      {
+        (*lists_disp)++;
+      }
+      print_queues(gui->inner_queues, execution, ready, new, finished, *lists_disp);
     }
     else if (c == KEY_F(5)) // Retrocede RAM (F5)
     {
@@ -195,8 +207,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
       }
       print_swap(gui->inner_swap, *swap, *swap_disp);
     }
-
-    else if (c == ESC) // Acceso rápido para salir del programa con ESC
+    else if (c == ESC) // Acceso rápido para salir
     {
       exit_command(exited, gui, execution, ready, new, finished);
     }
@@ -214,7 +225,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
 }
 
 void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *ready, Queue *new, Queue *finished,
-                  TMS *tms, FILE **swap, int tms_disp, int swap_disp, GUI *gui)
+                  TMS *tms, FILE **swap, int tms_disp, int swap_disp, int lists_disp, GUI *gui)
 {
   FILE *file = NULL;  // Almacena el puntero al archivo a cargar
   int value_par2 = 0; // Almacena el uid como valor numerico
@@ -367,13 +378,13 @@ void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *r
   }
 
   // Se imprimen las colas para que se refleje los nodos que vayamos ingresando de forma instántanea
-  print_queues(gui->inner_queues, *execution, *ready, *new, *finished);
+  print_queues(gui->inner_queues, execution, ready, new, finished, lists_disp);
   // Se refresca el área de mensajes
   wrefresh(gui->inner_msg); 
 }
 
 void kill_command(char *parameter1, Queue *execution, Queue *ready, Queue *new, Queue *finished,
-                  TMS *tms, FILE **swap, int tms_disp, GUI *gui)
+                  TMS *tms, FILE **swap, int tms_disp, int lists_disp, GUI *gui)
 {
   int pid_to_search = 0; // Variable para almacenar el pid del proceso a matar
 
@@ -432,7 +443,7 @@ void kill_command(char *parameter1, Queue *execution, Queue *ready, Queue *new, 
     mvwprintw(gui->inner_msg, 0, 0, "Error: no se pudo encontrar el pcb con pid [%d].", pid_to_search); // No se encontro el índice
 
   // Se imprimen las colas después de los cambios realizados
-  print_queues(gui->inner_queues, *execution, *ready, *new, *finished);
+  print_queues(gui->inner_queues, execution, ready, new, finished, lists_disp);
 
   // Se refresca el área de mensajes
   wrefresh(gui->inner_msg);
@@ -476,7 +487,7 @@ int confirm_exit(GUI *gui)
 
 // Evalúa los comandos ingresados por el usuario
 void evaluate_command(GUI *gui, int *exited, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                      TMS *tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp)
+                      TMS *tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp, int *lists_disp)
 {
   /* TOKENS */
   char command[256] = {0};    // Almacena el comando ingresado
@@ -497,12 +508,12 @@ void evaluate_command(GUI *gui, int *exited, char *buffer, Queue *execution, Que
   else if (!strcmp(command, "LOAD")) // Si el comando es LOAD
   {
     load_command(parameter1, parameter2, execution, ready, new, finished,
-                 tms, swap, *tms_disp, *swap_disp, gui);
+                 tms, swap, *tms_disp, *swap_disp, *lists_disp, gui);
   }
   else if (!strcmp(command, "KILL")) // Si el comando es KILL
   {
     kill_command(parameter1, execution, ready, new, finished,
-                 tms, swap, *tms_disp, gui);
+                 tms, swap, *tms_disp, *lists_disp, gui);
   }
   else // Si no es un comando válido
   {

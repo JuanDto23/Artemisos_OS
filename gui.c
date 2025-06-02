@@ -58,8 +58,8 @@ void initialize_gui(GUI *gui)
   mvwprintw(gui->tmp, 0, (WIDTH_TMP - strlen("TMP")) / 2, "%s", "TMP");
   mvwprintw(gui->keys, 0, (WIDTH_KEYS - strlen("TECLAS ESPECIALES")) / 2, "%s", "TECLAS ESPECIALES");
 
-  // Escribir línea estática en la ventanaKEYS
-  mvwprintw(gui->inner_keys, 0, 0, "[Up][Down]:History  [Left][Right]:Speed  [PgUp][PgDwn]:TMS  [Ins][Supr]:TMP  [F5][F6]:RAM  [F7][F8]:SWAP  [Alt-][Alt+]:Lists");
+  // Escribir línea estática en la ventana KEYS
+  mvwprintw(gui->inner_keys, 0, 0, "[Up][Down]:History  [Left][Right]:Speed  [PgUp][PgDwn]:TMS  [Ins][Supr]:TMP [F1][F2]:Lists  [F5][F6]:RAM  [F7][F8]:SWAP");
 
   // Refrescar ventanas
   wrefresh(gui->prompt);
@@ -125,71 +125,121 @@ void print_processor(WINDOW *inner_cpu, PCB *pcb)
 }
 
 // Imprime los procesos de las colas
-void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new, Queue finished)
+void print_queues(WINDOW *inner_queues, Queue *execution, Queue *ready, Queue *new, Queue *finished, int lists_disp)
 {
+  int total_rows_per_display = HEIGHT_QUEUES - 2; // Total de renglones que se pueden mostrar en la subventana de colas
+  int row = 0;                                    // Renglón que permite impresión dinámica
+
   // Se limpia la subventana de las Colas
   werase(inner_queues);
 
-  int row = 0; // Renglón que permite impresión dinámica
+  // Si el desplazamiento se encuentra al principio, poner el iterador de cola en cabecera de cada cola
+  if (lists_disp == 0)
+  {
+    execution->iterator = execution->head;
+    ready->iterator = ready->head;
+    new->iterator = new->head;
+    finished->iterator = finished->head;
+  }
+
+  PCB *auxiliar_it_ready = ready->iterator;       // Puntero auxiliar para iterar sobre la cola de Listos
+  PCB *auxiliar_it_new = new->iterator;           // Puntero auxiliar para iterar sobre la cola de Nuevos
+  PCB *auxiliar_it_finished = finished->iterator; // Puntero auxiliar para iterar sobre la cola de Terminados
+
+  int number_disps_ready = (ready->elements) / (total_rows_per_display - 1);                                               // Número de desplazamientos de Listos
+  int number_disps_new = number_disps_ready + (new->elements) / (total_rows_per_display - 1) + 1;                              // Número de desplazamientos de Nuevos
+  int number_disps_finished = number_disps_ready + number_disps_new + (finished->elements) / (total_rows_per_display - 1) + 1; // Número de desplazamientos de Terminados
 
   // SECCIÓN EJECUCIÓN
-  for (int i = 0; i < WIDTH_QUEUES; i++)
+  // Podemos imprimir la sección de Ejecución si el desplazamiento se encuentra al principio
+  if (lists_disp == 0)
   {
-    // ACS_HLINE: caracter de línea horizontal "bonita"
-    mvwaddch(inner_queues, row, i, ACS_HLINE);
+    for (int i = 0; i < WIDTH_QUEUES; i++)
+      // ACS_HLINE: caracter de línea horizontal "bonita"
+      mvwaddch(inner_queues, row, i, ACS_HLINE);
+    mvwprintw(inner_queues, row++, (WIDTH_QUEUES - strlen("EJECUCION")) / 2, "%s[%d]", "EJECUCION", execution->elements);
   }
-  mvwprintw(inner_queues, row, (WIDTH_QUEUES - strlen("EJECUCION")) / 2, "%s[%d]", "EJECUCION", execution.elements);
-  for (++row; execution.head != NULL; row++)
+  // Si el iterador de ejecución no es NULL, significa que hay un proceso en Ejecución
+  if (execution->iterator != NULL)
   {
-    mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",
-              execution.head->pid, execution.head->UID, execution.head->P, execution.head->KCPU, execution.head->KCPUxU, execution.head->file_name,
-              execution.head->AX, execution.head->BX, execution.head->CX, execution.head->DX, execution.head->PC, execution.head->IR);
-    execution.head = execution.head->next;
+    for (; execution->iterator != NULL && row < total_rows_per_display; row++)
+    {
+      mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",
+                execution->iterator->pid, execution->iterator->UID, execution->iterator->P, execution->iterator->KCPU, execution->iterator->KCPUxU, execution->iterator->file_name,
+                execution->iterator->AX, execution->iterator->BX, execution->iterator->CX, execution->iterator->DX, execution->iterator->PC, execution->iterator->IR);
+      execution->iterator = execution->iterator->next;
+    }
   }
 
   // SECCIÓN LISTOS
-  for (int i = 0; i < WIDTH_QUEUES; i++)
+  // Podemos imprimir la sección de Listos si el desplazamiento se encuentra al principio
+  if (lists_disp == 0)
   {
-    // ACS_HLINE: caracter de línea horizontal "bonita"
-    mvwaddch(inner_queues, row, i, ACS_HLINE);
+    for (int i = 0; i < WIDTH_QUEUES; i++)
+      // ACS_HLINE: caracter de línea horizontal "bonita"
+      mvwaddch(inner_queues, row, i, ACS_HLINE);
+    mvwprintw(inner_queues, row++, (WIDTH_QUEUES - strlen("LISTOS")) / 2, "%s[%d]", "LISTOS", ready->elements);
   }
-  mvwprintw(inner_queues, row, (WIDTH_QUEUES - strlen("LISTOS")) / 2, "%s[%d]", "LISTOS", ready.elements);
-  for (++row; ready.head != NULL; row++)
+  if (ready->iterator != NULL && lists_disp <= number_disps_ready)
   {
-    mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",
-              ready.head->pid, ready.head->UID, ready.head->P, ready.head->KCPU, ready.head->KCPUxU, ready.head->file_name, ready.head->AX, ready.head->BX,
-              ready.head->CX, ready.head->DX, ready.head->PC, ready.head->IR);
-    ready.head = ready.head->next;
+    for (; auxiliar_it_ready != NULL && row < total_rows_per_display; row++)
+    {
+      mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",
+                auxiliar_it_ready->pid, auxiliar_it_ready->UID, auxiliar_it_ready->P, auxiliar_it_ready->KCPU, auxiliar_it_ready->KCPUxU, auxiliar_it_ready->file_name, auxiliar_it_ready->AX, auxiliar_it_ready->BX,
+                auxiliar_it_ready->CX, auxiliar_it_ready->DX, auxiliar_it_ready->PC, auxiliar_it_ready->IR);
+      auxiliar_it_ready = auxiliar_it_ready->next;
+    }
+    // Hay más procesos por mostrar
+    if (auxiliar_it_ready != NULL)
+      ready->iterator = auxiliar_it_ready; // Se actualiza el iterador de Listos para la siguiente impresión
   }
 
   // SECCIÓN NUEVOS
-  for (int i = 0; i < WIDTH_QUEUES; i++)
+  // Se puede imprimir la sección de Nuevos, una vez que Listos haya impreso sus procesos
+  if (auxiliar_it_ready == NULL && row > 0)
   {
-    // ACS_HLINE: caracter de línea horizontal "bonita"
-    mvwaddch(inner_queues, row, i, ACS_HLINE);
+    for (int i = 0; i < WIDTH_QUEUES; i++)
+      // ACS_HLINE: caracter de línea horizontal "bonita"
+      mvwaddch(inner_queues, row, i, ACS_HLINE);
+    mvwprintw(inner_queues, row++, (WIDTH_QUEUES - strlen("NUEVOS")) / 2, "%s[%d]", "NUEVOS", new->elements);
   }
-  mvwprintw(inner_queues, row, (WIDTH_QUEUES - strlen("NUEVOS")) / 2, "%s[%d]", "NUEVOS", new.elements);
-  for (++row; new.head != NULL; row++)
+  if (new->iterator != NULL && lists_disp <= number_disps_new)
   {
-    mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",
-              new.head->pid, new.head->UID, new.head->P, new.head->KCPU, new.head->KCPUxU, new.head->file_name, new.head->AX, new.head->BX,
-              new.head->CX, new.head->DX, new.head->PC, new.head->IR);
-    new.head = new.head->next;
+    for (; auxiliar_it_new != NULL && row < total_rows_per_display; row++)
+    {
+      mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",
+                auxiliar_it_new->pid, auxiliar_it_new->UID, auxiliar_it_new->P, auxiliar_it_new->KCPU, auxiliar_it_new->KCPUxU, auxiliar_it_new->file_name, auxiliar_it_new->AX, auxiliar_it_new->BX,
+                auxiliar_it_new->CX, auxiliar_it_new->DX, auxiliar_it_new->PC, auxiliar_it_new->IR);
+      auxiliar_it_new = auxiliar_it_new->next;
+    }
+    // Hay más procesos por mostrar
+    if (auxiliar_it_new != NULL)
+      new->iterator = auxiliar_it_new; // Se actualiza el iterador de Nuevos para la siguiente impresión
   }
 
   // SECCIÓN TERMINADOS
-  for (int i = 0; i < WIDTH_QUEUES; i++)
+  // Se puede imprimir la sección de Termindos, una vez que Nuevos haya impreso sus procesos
+  if (auxiliar_it_new == NULL && row > 0)
   {
-    // ACS_HLINE: caracter de línea horizontal "bonita"
-    mvwaddch(inner_queues, row, i, ACS_HLINE);
+    for (int i = 0; i < WIDTH_QUEUES; i++)
+      // ACS_HLINE: caracter de línea horizontal "bonita"
+      mvwaddch(inner_queues, row, i, ACS_HLINE);
+    mvwprintw(inner_queues, row++, (WIDTH_QUEUES - strlen("TERMINADOS")) / 2, "%s[%d]", "TERMINADOS", finished->elements);
   }
-  mvwprintw(inner_queues, row, (WIDTH_QUEUES - strlen("TERMINADOS")) / 2, "%s[%d]", "TERMINADOS", finished.elements);
-  for (++row; finished.head != NULL; row++)
+
+  // Si el iterador de Terminados no es NULL, significa que hay procesos en Terminados
+  if (finished->iterator != NULL && lists_disp <= number_disps_finished)
   {
-    mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",
-              finished.head->pid, finished.head->UID, finished.head->P, finished.head->KCPU, finished.head->KCPUxU, finished.head->file_name,
-              finished.head->AX, finished.head->BX, finished.head->CX, finished.head->DX, finished.head->PC, finished.head->IR);
-    finished.head = finished.head->next;
+    for (; auxiliar_it_finished != NULL && row < total_rows_per_display; row++)
+    {
+      mvwprintw(inner_queues, row, 0, "PID:[%u] UID:[%d] P:[%d] KCPU:[%d] KCPUxU:[%d] FILE:[%s] AX:[%ld] BX:[%ld] CX:[%ld] DX:[%ld] PC:[%u] IR:[%s]",
+                auxiliar_it_finished->pid, auxiliar_it_finished->UID, auxiliar_it_finished->P, auxiliar_it_finished->KCPU, auxiliar_it_finished->KCPUxU, auxiliar_it_finished->file_name,
+                auxiliar_it_finished->AX, auxiliar_it_finished->BX, auxiliar_it_finished->CX, auxiliar_it_finished->DX, auxiliar_it_finished->PC, auxiliar_it_finished->IR);
+      auxiliar_it_finished = auxiliar_it_finished->next;
+    }
+    // Hay más procesos por mostrar
+    if (auxiliar_it_finished != NULL)
+      finished->iterator = auxiliar_it_finished; // Se actualiza el iterador de Nuevos para la siguiente impresión
   }
 
   // Se refresca la subventana de Colas

@@ -37,12 +37,12 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
 
 // Funciones para la interpretación de comando de la prompt
 void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *ready, Queue *new, Queue *finished,
-                  TMS *tms, FILE **swap, int tms_disp, int swap_disp, GUI *gui);
+                  TMS *tms, FILE **swap, int tms_disp, int swap_disp, int lists_disp, GUI *gui);
 void kill_command(char *parameter1, Queue *execution, Queue *ready, Queue *new, Queue *finished,
-                  TMS *tms, FILE **swap, int tms_disp, GUI *gui);
+                  TMS *tms, FILE **swap, int tms_disp, int lists_disp, GUI *gui);
 void exit_command(int *exited, GUI *gui, Queue *execution, Queue *ready, Queue *new, Queue *finished);
 int confirm_exit(GUI *gui);
 void evaluate_command(GUI *gui, int *exited, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     TMS *tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp);
+                     TMS *tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp, int *lists_disp);
 
 #endif
