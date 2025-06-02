@@ -45,7 +45,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
                       int *index, int *index_history,
                       Queue *execution, Queue *ready, Queue *finished, Queue *new,
                       unsigned *timer, unsigned *init_timer, int *speed_level, TMS *tms, FILE **swap,
-                      int *swap_disp, int *tms_disp, int *tmp_disp, PCB *execution_pcb)
+                      int *swap_disp, int *tms_disp, int *tmp_disp, int * lists_disp, PCB *execution_pcb)
 {
   int c = 0; // Carácter introducido por el usuario
   // Si se presionó una tecla en la terminal (kbhit)
@@ -167,6 +167,12 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
       }
       print_tmp(gui->inner_tmp, execution_pcb, *tmp_disp);
     }
+    else if (c == KEY_F(1)) // Retrocede Colas (F1)
+    {  
+    }
+    else if (c == KEY_F(2)) // Avanza Colas (F2)
+    {
+    }
     else if (c == KEY_F(5)) // Retrocede RAM (F5)
     {
     }
@@ -260,16 +266,16 @@ void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *r
   tmp_size = (int)ceil((double)lines / PAGE_SIZE);
 
   // Se crea el proceso inicializando sus atributos
-  PCB *new_process = create_pcb(ready->pid, parameter1, &file, value_par2, tmp_size, lines);
+  PCB *new_process = create_pcb(pid, parameter1, &file, value_par2, tmp_size, lines);
   if (!new_process)
   {
-    mvwprintw(gui->inner_msg, 1, 0, "Error: no pudo crear el proceso %d [%s].", ready->pid, parameter1);
+    mvwprintw(gui->inner_msg, 1, 0, "Error: no pudo crear el proceso %d [%s].", pid, parameter1);
     wrefresh(gui->inner_msg);
     return;
   }
 
   // Incremento de pid para el siguiente proceso a crear
-  (ready->pid)++;
+  pid++;
 
   /*
     Se verifica si el usuario del nuevo proceso ya existe o no (tiene algún proceso en Ejecución o Listos).
@@ -362,10 +368,8 @@ void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *r
 
   // Se imprimen las colas para que se refleje los nodos que vayamos ingresando de forma instántanea
   print_queues(gui->inner_queues, *execution, *ready, *new, *finished);
-
-  mvwprintw(gui->inner_msg, 0, 0, "lines: %d, SWAP_SIZE: %d, TmpSize: %d, available_pages: %d", lines, SWAP_SIZE, new_process->TmpSize, tms->available_pages);
-  // wrefresh(gui->inner_msg);
-  wrefresh(gui->inner_msg); // Se refresca el área de mensajes
+  // Se refresca el área de mensajes
+  wrefresh(gui->inner_msg); 
 }
 
 void kill_command(char *parameter1, Queue *execution, Queue *ready, Queue *new, Queue *finished,
@@ -444,7 +448,7 @@ void exit_command(int *exited, GUI *gui, Queue *execution, Queue *ready, Queue *
   if (confirm_exit(gui))
   {
     // Se liberan todas las colas
-    free_queues(execution, ready, finished);
+    free_queues(execution, ready, finished, new);
     *exited = true;
     return;
   }
@@ -472,7 +476,7 @@ int confirm_exit(GUI *gui)
 
 // Evalúa los comandos ingresados por el usuario
 void evaluate_command(GUI *gui, int *exited, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                      TMS *tms, FILE **swap, int *swap_disp, int *tmp_disp, int *tms_disp)
+                      TMS *tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp)
 {
   /* TOKENS */
   char command[256] = {0};    // Almacena el comando ingresado

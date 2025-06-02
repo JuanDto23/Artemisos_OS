@@ -243,7 +243,7 @@ void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp)
     {
       fread(buffer, sizeof(char), INSTRUCTION_JUMP, swap);
       // Imprime las instrucciones guardadas en la SWAP junto con su dirección
-      mvwprintw(inner_swap, instruction + 1, ((page + 1) * WIDTH_SWAP / 6) - 20, "[%04X] %.12s", (swap_disp * instructions_per_disp + page * PAGE_SIZE) | instruction, buffer);
+      mvwprintw(inner_swap, instruction + 1, ((page + 1) * WIDTH_SWAP / 6) - 20, "[%04X]%.12s", (swap_disp * instructions_per_disp + page * PAGE_SIZE) | instruction, buffer);
     }
   }
 
@@ -334,4 +334,22 @@ void clear_prompt(WINDOW *inner_prompt, int row)
   {
     mvwaddch(inner_prompt, row, PROMPT_START + i, ' ');
   }
+}
+
+// Traducir la dirección virtual (PC), por la dirección real en SWAP
+void print_traduction(WINDOW *inner_msg, PCB *current_process)
+{
+  // Se limpia la subventana de mensajes
+  werase(inner_msg);
+
+  mvwprintw(inner_msg, 0, 0, "Traduciendo dirección para PID:[%d].", current_process->pid);
+
+  int base_page_address = current_process->TMP[current_process->PC / PAGE_SIZE] * PAGE_SIZE;
+  int offset = current_process->PC % 16;
+  int real_address = base_page_address | offset;
+
+  mvwprintw(inner_msg, 2, 0, "PC:[%d] -> SWAP:[0x%X | 0x%X = 0x%X].", current_process->PC, base_page_address, offset, real_address);
+
+  // Se refresca la subventana de mensajes
+  wrefresh(inner_msg);
 }

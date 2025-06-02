@@ -13,7 +13,6 @@ void initialize_queue(Queue *queue)
 {
   queue->head = NULL;
   queue->elements = 0;
-  queue->pid = 1;
 }
 
 // Crea un PCB y lo retorna
@@ -102,38 +101,31 @@ void remove_pcb(PCB **pcb)
   }
 }
 
-// Elimina la cola de procesos
+// Elimina la cola de procesos sin cerrar archivos
 void kill_queue(Queue *queue)
 {
   while (queue->head)
   {
     PCB *temp = queue->head;
     queue->head = queue->head->next; // La cabecera almacena el nodo adelante
-    remove_pcb(&temp);
+    free(temp);
   }
 }
 
 // Libera las colas de Ejecución, Listos y Terminados
-void free_queues(Queue *execution, Queue *ready, Queue *finished)
+void free_queues(Queue *execution, Queue *ready, Queue *finished, Queue *new)
 {
   // Se liberan las colas de Ejecución y Listos
   kill_queue(execution);
   kill_queue(ready);
-  /*
-   * No se invoca kill_queue(finished) porque
-   * la función kill_queue cierra los archivos
-   * de los nodos, y en la cola Terminados, se
-   * supone que el archivo de cada nodo ya se
-   * encuentra cerrado.
-   *
-   * Por lo tanto, se recorre la cola Terminados
-   * donde solo se hace uso de la función free
-   * para liberar cada pcb. */
-  while (finished->head)
+  kill_queue(finished);
+  
+  // Los procesos en Nuevos necesitan cerrar sus archivos también
+  while (new->head)
   {
-    PCB *temp = finished->head;
-    finished->head = finished->head->next;
-    free(temp);
+    PCB *temp = new->head;
+    new->head = new->head->next;
+    remove_pcb(&temp);
   }
 }
 

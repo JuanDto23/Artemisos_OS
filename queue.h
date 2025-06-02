@@ -9,7 +9,6 @@ typedef struct queue
 {
   PCB *head;             // Puntero a pcb, donde se ligan todos los nodos de la cola
   unsigned int elements; // Contador de nodos de la cola
-  int pid;               // identifica cada nodo de forma única
 } Queue;
 
 // Función de inicialización de la cola
@@ -25,7 +24,7 @@ PCB *dequeue(Queue *queue);
 // Funciones de liberación de memoria
 void remove_pcb(PCB **pcb);
 void kill_queue(Queue *queue);
-void free_queues(Queue *execution, Queue *ready, Queue *finished);
+void free_queues(Queue *execution, Queue *ready, Queue *finished, Queue *new);
 
 // Funciones de extracción de nodos de la cola
 PCB *extract_by_pid(int pid, Queue *queue);

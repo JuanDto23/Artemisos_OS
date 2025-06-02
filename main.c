@@ -85,7 +85,7 @@ void run_simulator(void)
       command_handling(&gui, &exited, buffers, &index, &index_history,
                        &execution, &ready, &finished, &new,
                        &timer, &init_timer, &speed_level, &tms,
-                       &swap, &swap_disp, &tms_disp, &tmp_disp, execution.head);
+                       &swap, &swap_disp, &tms_disp, &tmp_disp, &lists_disp, execution.head);
       // Verifica si hay nodos en la cola Listos
       if (ready.head)
       {
@@ -94,9 +94,10 @@ void run_simulator(void)
         enqueue(extract_by_priority(minor_priority, &ready), &execution);
         // Se establece en 0 para el proceso que acaba de entrar
         quantum = 0;
-        // Se imprimen colas y la TMP dado que se acaba de encolar un proceso a Ejecución
+        // Se imprimen colas, la TMP y la traducción dado que se acaba de encolar un proceso a Ejecución
         print_queues(gui.inner_queues, execution, ready, new, finished);
         print_tmp(gui.inner_tmp, execution.head, tmp_disp);
+        print_traduction(gui.inner_msg, execution.head);
       }
     }
     // Hay un nodo en Ejecución
@@ -106,7 +107,7 @@ void run_simulator(void)
       command_handling(&gui, &exited, buffers, &index, &index_history,
                        &execution, &ready, &finished, &new,
                        &timer, &init_timer, &speed_level, &tms,
-                       &swap, &swap_disp, &tms_disp, &tmp_disp, execution.head);
+                       &swap, &swap_disp, &tms_disp, &tmp_disp, &lists_disp, execution.head);
     }
     // Si se alcanzó el MAX_TIME se ejecuta la instrucción
     else
@@ -205,6 +206,7 @@ void run_simulator(void)
       print_queues(gui.inner_queues, execution, ready, new, finished); // Se imprimen las colas en su ventana
       print_tmp(gui.inner_tmp, execution.head, tmp_disp);              // Imprime el contenido de la TMP del proceso en ejecución con desplazamiento
       print_processor(gui.inner_cpu, execution.head);                  // Se imprime el contenido del CPU con el proceso en ejecución
+      print_traduction(gui.inner_msg, execution.head);                 // Se imprime la traducción de la dirección virtual (PC), por la dirección real en SWAP
     }
     wmove(gui.inner_prompt, 0, PROMPT_START + index); // Se coloca el cursor en su lugar
     wrefresh(gui.inner_prompt);                       // Refresca las ventana de inner_prompt

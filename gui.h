@@ -113,4 +113,6 @@ void empty_processor(WINDOW *inner_cpu);
 // Función para limpiar una línea especifica de la prompt
 void clear_prompt(WINDOW *inner_prompt, int row);
 
+// Función para imprimir la traducción de la dirección virtual (PC), por la dirección real en SWAP
+void print_traduction(WINDOW *inner_msg, PCB *current_process);
 #endif

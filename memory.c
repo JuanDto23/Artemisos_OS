@@ -104,6 +104,7 @@ void load_to_swap(PCB *new_process, TMS *tms, FILE **swap, int lines)
   int k = 0;                           // Iterador para TMP del nuevo proceso
   int pages_needed = new_process->TmpSize; // Páginas necesitadas por el proceso
   char buffer[INSTRUCTION_SIZE] = {0}; // Buffer para la instrucción leída del archivo
+  char clear_instruction_space[INSTRUCTION_SIZE] = {0};
 
   // Recorre la TMS en busca de marcos disponibles
   for (int i = 0; i < MAX_PAGES; i++)
@@ -127,6 +128,10 @@ void load_to_swap(PCB *new_process, TMS *tms, FILE **swap, int lines)
           if (buffer[0] != '\0')
           {
             // Posiciona el puntero de archivo SWAP en el marco y desplazamiento correspondiente
+            fseek(*swap, i * PAGE_JUMP | j * INSTRUCTION_JUMP, SEEK_SET);
+            // Se limpia el espacio de instrucción en la SWAP, para después escribirla
+            fwrite(clear_instruction_space, sizeof(char), INSTRUCTION_SIZE, *swap);
+            // Se reposiciona el puntero después de haber limpiado el espacio de instrucción
             fseek(*swap, i * PAGE_JUMP | j * INSTRUCTION_JUMP, SEEK_SET);
             // Se escribe la instrucción del buffer a la swap
             fwrite(buffer, sizeof(char), strlen(buffer), *swap);

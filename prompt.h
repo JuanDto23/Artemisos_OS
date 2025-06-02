@@ -33,7 +33,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
                      int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished, Queue *new,
                      unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE ** swap,
-                     int *swap_disp, int *tms_disp, int * tmp_disp, PCB *execution_pcb);
+                     int *swap_disp, int *tms_disp, int * tmp_disp,  int * lists_disp, PCB *execution_pcb);
 
 // Funciones para la interpretación de comando de la prompt
 void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *ready, Queue *new, Queue *finished,

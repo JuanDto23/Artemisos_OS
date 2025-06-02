@@ -43,6 +43,7 @@ extern int NumUs;
 extern int IncCPU;
 extern double W;
 extern const int PBase;
+extern int pid;
 
 // Funciones de actualización de parámetros de planificación
 void update_KCPUxU_per_process(int uid, Queue *queue);
@@ -60,4 +61,5 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
 
 // Función para recalcular prioridades
 void recalculate_priorities(GUI *gui, Queue ready, int *minor_priority);
+
 #endif

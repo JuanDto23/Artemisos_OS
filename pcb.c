@@ -18,6 +18,9 @@ int NumUs = 0;
 double W = 0.0; // Después el peso es 1/NumUs
 const int PBase = 60;
 
+// Contador serial del pid's
+int pid = 1;
+
 // Actualiza los contadores de uso del CPU para todos los procesos (no Terminados) del usuario dueño del proceso de la cola
 void update_KCPUxU_per_process(int uid, Queue *queue)
 {
@@ -299,7 +302,7 @@ int interpret_instruction(GUI *gui, char *instruction, PCB *pcb)
 }
 
 // Gestiona la terminación de un proceso en ejecución, actualizando las colas y la TMS
-void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution,  Queue *ready,
+void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution, Queue *ready,
                                 Queue *new, TMS *tms, int tms_disp, FILE **swap)
 {
   PCB *brother_process = NULL; // Puntero para almacenar el hermano del proceso
@@ -308,8 +311,7 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
   werase(gui->inner_msg);
 
   // Si no queda ningún proceso hermano ya sea en Listos o en Ejecución
-  if ( !( (brother_process = search_brother_process(current_process->UID, current_process->file_name, *ready))
-         || (brother_process = search_brother_process(current_process->UID, current_process->file_name, *execution)) ))
+  if (!((brother_process = search_brother_process(current_process->UID, current_process->file_name, *ready)) || (brother_process = search_brother_process(current_process->UID, current_process->file_name, *execution))))
   {
     // Establecer sus marcos de SWAP cómo libres en la TMS
     free_pages_from_tms(current_process, tms);
@@ -360,7 +362,7 @@ void recalculate_priorities(GUI *gui, Queue ready, int *minor_priority)
 {
   // Se limpia el área de mensajes
   werase(gui->inner_msg);
-  
+
   // Se imprime mensaje de recalcular
   mvwprintw(gui->inner_msg, 0, 0, "Recalculando prioridades del planificador...");
   *minor_priority = get_minor_priority(ready);
