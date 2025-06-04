@@ -13,7 +13,6 @@ void initialize_queue(Queue *queue)
 {
   queue->head = NULL;
   queue->elements = 0;
-  queue->iterator = NULL;
 }
 
 // Crea un PCB y lo retorna

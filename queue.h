@@ -9,7 +9,6 @@ typedef struct queue
 {
   PCB *head;             // Puntero a pcb, donde se ligan todos los nodos de la cola
   unsigned int elements; // Contador de nodos de la cola
-  PCB *iterator;         // Puntero para iterar sobre la cola
 } Queue;
 
 // Función de inicialización de la cola

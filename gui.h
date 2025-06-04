@@ -100,7 +100,7 @@ void initialize_gui(GUI *gui);
 // Funciones para imprimir contenido en las subventanas de la GUI
 void print_prompt(WINDOW *inner_prompt, int row);
 void print_processor(WINDOW *inner_cpu, PCB *pcb);
-void print_queues(WINDOW *inner_queues, Queue *execution, Queue *ready, Queue *new, Queue *finished, int lists_disp);
+void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new, Queue finished, int lists_disp);
 void print_ginfo(WINDOW *inner_ginfo, Queue execution);
 void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp);
 void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp);

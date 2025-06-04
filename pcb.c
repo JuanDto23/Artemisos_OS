@@ -353,6 +353,8 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
   else // Si aún hay procesos hermanos
     // Actualiza el PID en TMS para el hermano encontrado que sigue vivo
     update_pages_from_tms(brother_process, tms);
+
+  
   // Se muestran los cambios en la TMS
   print_tms(gui->inner_tms, *tms, tms_disp);
 }

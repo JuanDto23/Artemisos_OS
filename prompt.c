@@ -173,7 +173,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
       {
         (*lists_disp)--;
       }
-      print_queues(gui->inner_queues, execution, ready, new, finished, *lists_disp);
+      print_queues(gui->inner_queues, *execution, *ready, *new, *finished, *lists_disp);
     }
     else if (c == KEY_F(2)) // Avanza Colas (F2)
     {
@@ -183,7 +183,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
       {
         (*lists_disp)++;
       }
-      print_queues(gui->inner_queues, execution, ready, new, finished, *lists_disp);
+      print_queues(gui->inner_queues, *execution, *ready, *new, *finished, *lists_disp);
     }
     else if (c == KEY_F(5)) // Retrocede RAM (F5)
     {
@@ -378,7 +378,7 @@ void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *r
   }
 
   // Se imprimen las colas para que se refleje los nodos que vayamos ingresando de forma instántanea
-  print_queues(gui->inner_queues, execution, ready, new, finished, lists_disp);
+  print_queues(gui->inner_queues, *execution, *ready, *new, *finished, lists_disp);
   // Se refresca el área de mensajes
   wrefresh(gui->inner_msg); 
 }
@@ -443,7 +443,7 @@ void kill_command(char *parameter1, Queue *execution, Queue *ready, Queue *new, 
     mvwprintw(gui->inner_msg, 0, 0, "Error: no se pudo encontrar el pcb con pid [%d].", pid_to_search); // No se encontro el índice
 
   // Se imprimen las colas después de los cambios realizados
-  print_queues(gui->inner_queues, execution, ready, new, finished, lists_disp);
+  print_queues(gui->inner_queues, *execution, *ready, *new, *finished, lists_disp);
 
   // Se refresca el área de mensajes
   wrefresh(gui->inner_msg);

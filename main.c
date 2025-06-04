@@ -66,14 +66,14 @@ void run_simulator(void)
   initialize_ncurses_gui(&gui);
 
   // Impresión de plantillas de cada ventana
-  empty_processor(gui.inner_cpu);                                                  // Se imprime el contenido del CPU inicialmente vacío
-  print_queues(gui.inner_queues, &execution, &ready, &new, &finished, lists_disp); // Se imprimen las colas en su ventana
-  print_prompt(gui.inner_prompt, 0);                                               // Se imprime prompt en fila 0
-  create_swap(&swap);                                                              // Crear un archivo lleno de ceros al inicio del programa (SWAP)
-  print_swap(gui.inner_swap, swap, swap_disp);                                     // Imprime el contenido de la SWAP con desplazamiento
-  initialize_tms(&tms);                                                            // Inicializar tabla TMS (arreglo en ceros y páginas máximas)
-  print_tms(gui.inner_tms, tms, tms_disp);                                         // Imprime el contenido de la TMS con desplazamiento
-  print_tmp(gui.inner_tmp, execution.head, tmp_disp);                              // Imprime el contenido de la TMP con desplazamiento
+  empty_processor(gui.inner_cpu);                                              // Se imprime el contenido del CPU inicialmente vacío
+  print_queues(gui.inner_queues, execution, ready, new, finished, lists_disp); // Se imprimen las colas en su ventana
+  print_prompt(gui.inner_prompt, 0);                                           // Se imprime prompt en fila 0
+  create_swap(&swap);                                                          // Crear un archivo lleno de ceros al inicio del programa (SWAP)
+  print_swap(gui.inner_swap, swap, swap_disp);                                 // Imprime el contenido de la SWAP con desplazamiento
+  initialize_tms(&tms);                                                        // Inicializar tabla TMS (arreglo en ceros y páginas máximas)
+  print_tms(gui.inner_tms, tms, tms_disp);                                     // Imprime el contenido de la TMS con desplazamiento
+  print_tmp(gui.inner_tmp, execution.head, tmp_disp);                          // Imprime el contenido de la TMP con desplazamiento
 
   // Ciclo principal del simulador
   do
@@ -95,7 +95,7 @@ void run_simulator(void)
         // Se establece en 0 para el proceso que acaba de entrar
         quantum = 0;
         // Se imprimen colas, la TMP y la traducción dado que se acaba de encolar un proceso a Ejecución
-        print_queues(gui.inner_queues, &execution, &ready, &new, &finished, lists_disp);
+        print_queues(gui.inner_queues, execution, ready, new, finished, lists_disp);
         print_tmp(gui.inner_tmp, execution.head, tmp_disp);
         print_traduction(gui.inner_msg, execution.head);
       }
@@ -139,6 +139,7 @@ void run_simulator(void)
       {
         // Interpreta y ejecuta la instrucción
         result_interpretation = interpret_instruction(&gui, instruction, execution.head);
+
         if (result_interpretation != 0 && result_interpretation != -1) // Instrucción ejecutada correctamente
         {
           // Se incrementa PC
@@ -187,7 +188,7 @@ void run_simulator(void)
             // Actualiza los parámetros de planificación, para todos los nodos de la cola Listos
             update_parameters(&ready);
             // Mostrar el proceso extraído de Ejecución por 3 segundos y recalcular prioridades
-            print_queues(gui.inner_queues, &execution, &ready, &new, &finished, lists_disp);
+            print_queues(gui.inner_queues, execution, ready, new, finished, lists_disp);
             // Recalcular prioridades de la cola de Listos
             recalculate_priorities(&gui, ready, &minor_priority);
             // Encolar el proceso de menor prioridad de Listos a Ejecución
@@ -201,12 +202,12 @@ void run_simulator(void)
           quantum = 0;
         }
       }
-      timer = init_timer;                                                              // Se reinicializa temporizador para volver a escribir en línea de comandos
-      print_ginfo(gui.inner_ginfo, execution);                                         // Se imprime información general
-      print_queues(gui.inner_queues, &execution, &ready, &new, &finished, lists_disp); // Se imprimen las colas en su ventana
-      print_tmp(gui.inner_tmp, execution.head, tmp_disp);                              // Imprime el contenido de la TMP del proceso en ejecución con desplazamiento
-      print_processor(gui.inner_cpu, execution.head);                                  // Se imprime el contenido del CPU con el proceso en ejecución
-      print_traduction(gui.inner_msg, execution.head);                                 // Se imprime la traducción de la dirección virtual (PC), por la dirección real en SWAP
+      timer = init_timer;                                                          // Se reinicializa temporizador para volver a escribir en línea de comandos
+      print_ginfo(gui.inner_ginfo, execution);                                     // Se imprime información general
+      print_queues(gui.inner_queues, execution, ready, new, finished, lists_disp); // Se imprimen las colas en su ventana
+      print_tmp(gui.inner_tmp, execution.head, tmp_disp);                          // Imprime el contenido de la TMP del proceso en ejecución con desplazamiento
+      print_processor(gui.inner_cpu, execution.head);                              // Se imprime el contenido del CPU con el proceso en ejecución
+      print_traduction(gui.inner_msg, execution.head);                             // Se imprime la traducción de la dirección virtual (PC), por la dirección real en SWAP
     }
     wmove(gui.inner_prompt, 0, PROMPT_START + index); // Se coloca el cursor en su lugar
     wrefresh(gui.inner_prompt);                       // Refresca las ventana de inner_prompt
