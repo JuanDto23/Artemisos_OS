@@ -11,6 +11,7 @@ typedef struct gui GUI;
 #define PAGE_SIZE 16
 #define INSTRUCTION_SIZE 32
 #define SWAP_SIZE 65536
+#define RAM_SIZE 256
 
 // Se definen los offsets para el acceso a la memoria
 #define PAGE_JUMP 0x200
@@ -22,6 +23,9 @@ typedef struct tms
   int table[MAX_PAGES];
   int available_pages;
 } TMS;
+
+// Se crea un bloque de almacenamiento continuo RAM
+extern char RAM[RAM_SIZE][INSTRUCTION_SIZE];
 
 // Función para crear un archivo de memoria de intercambio (SWAP)
 void create_swap(FILE **swap);

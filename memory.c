@@ -9,6 +9,8 @@
 #include "gui.h"
 #include "queue.h"
 
+char RAM[RAM_SIZE][INSTRUCTION_SIZE];
+
 /* Crear un archivo lleno de ceros al inicio del programa,
    para el manejo de memoria de intercambio (swap) */
 void create_swap(FILE **swap)

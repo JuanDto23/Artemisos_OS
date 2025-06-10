@@ -121,10 +121,12 @@ void run_simulator(void)
       {
         // Se actualiza el número de usuarios (NumUs) y el peso W
         update_users(execution.head->UID, ready);
-        // El proceso termina y se realiza la gestión necesaria
-        handle_process_termination(&gui, execution.head, &execution, &ready, &new, &tms, tms_disp, &swap);
-        // Se extrae proceso de Ejecución y se encola a Terminados
-        enqueue(dequeue(&execution), &finished);
+        // Se extrae nodo en ejecución
+        PCB *process_extracted = dequeue(&execution);
+        // El proceso termina y se realiza la gestión necesaria, una vez se saca de ejecución
+        handle_process_termination(&gui, process_extracted, &execution, &ready, &new, &tms, tms_disp, &swap);
+        // Se encola a Terminados
+        enqueue(process_extracted, &finished);
         /* Se limpia área de mensajes con wclear para que redibuje todo
             y no queden residuos de carácteres */
         wclear(gui.inner_msg);
@@ -166,10 +168,12 @@ void run_simulator(void)
 
           // Se actualiza el número de usuarios (NumUs) y el peso W
           update_users(execution.head->UID, ready);
-          // El proceso termina y se realiza la gestión necesaria
-          handle_process_termination(&gui, execution.head, &execution, &ready, &new, &tms, tms_disp, &swap);
-          // Se extrae nodo en ejecución y encola en Terminados
-          enqueue(dequeue(&execution), &finished);
+          // Se extrae nodo en ejecución
+          PCB *process_extracted = dequeue(&execution);
+          // El proceso termina y se realiza la gestión necesaria, una vez se saca de ejecución
+          handle_process_termination(&gui, process_extracted, &execution, &ready, &new, &tms, tms_disp, &swap);
+          // Se encola a Terminados
+          enqueue(process_extracted, &finished);
           // Se imprime procesador vacío
           empty_processor(gui.inner_cpu);
           // Se refresca la subventana de mensajes
