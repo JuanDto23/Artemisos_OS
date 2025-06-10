@@ -43,13 +43,14 @@ void run_simulator(void)
   // Variables de manejo de memoria
   FILE *swap = NULL; // Bloque contiguo de almacenamiento binario en disco duro
   TMS tms;           // Estructura con tabla de marcos de SWAP y número de páginas disponibles
-  TMM tmm;
+  TMM tmm;           // Estructura con tabla de marcos de memoria y número de páginas disponibles
 
   // Variables para la navegacción de la SWAP, TMS, TMP y Listas
   int swap_disp = 0;  // Desplazamiento de SWAP
   int tms_disp = 0;   // Desplazamiento de TMS
   int tmp_disp = 0;   // Desplazamiento de TMP
   int lists_disp = 0; // Desplazamiento de Listas
+  int ram_disp = 0;   // Desplazamiento de RAM
 
   // Se crean instancias de las colas y se inicializan
   Queue execution;
@@ -75,7 +76,9 @@ void run_simulator(void)
   initialize_tms(&tms);                                                        // Inicializar tabla TMS (arreglo en ceros y páginas máximas)
   print_tms(gui.inner_tms, tms, tms_disp);                                     // Imprime el contenido de la TMS con desplazamiento
   print_tmp(gui.inner_tmp, execution.head, tmp_disp);                          // Imprime el contenido de la TMP con desplazamiento
-  print_tmm(gui.inner_tmm, tmm);                                     // Imprime el contenido de la TMS con desplazamiento
+  initialize_tmm(&tmm);                                                        // Inicializar tabla de marcos de memoria (TMM)
+  print_tmm(gui.inner_tmm, tmm);                                               // Imprime el contenido de la TMS con desplazamiento
+  print_ram(gui.inner_ram, ram_disp);  
 
   // Ciclo principal del simulador
   do
@@ -87,7 +90,7 @@ void run_simulator(void)
       command_handling(&gui, &exited, buffers, &index, &index_history,
                        &execution, &ready, &finished, &new,
                        &timer, &init_timer, &speed_level, &tms,
-                       &swap, &swap_disp, &tms_disp, &tmp_disp, &lists_disp, execution.head);
+                       &swap, &swap_disp, &tms_disp, &tmp_disp, &lists_disp, &ram_disp, execution.head);
       // Verifica si hay nodos en la cola Listos
       if (ready.head)
       {
@@ -109,7 +112,7 @@ void run_simulator(void)
       command_handling(&gui, &exited, buffers, &index, &index_history,
                        &execution, &ready, &finished, &new,
                        &timer, &init_timer, &speed_level, &tms,
-                       &swap, &swap_disp, &tms_disp, &tmp_disp, &lists_disp, execution.head);
+                       &swap, &swap_disp, &tms_disp, &tmp_disp, &lists_disp, &ram_disp, execution.head);
     }
     // Si se alcanzó el MAX_TIME se ejecuta la instrucción
     else

@@ -45,7 +45,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
                       int *index, int *index_history,
                       Queue *execution, Queue *ready, Queue *finished, Queue *new,
                       unsigned *timer, unsigned *init_timer, int *speed_level, TMS *tms, FILE **swap,
-                      int *swap_disp, int *tms_disp, int *tmp_disp, int * lists_disp, PCB *execution_pcb)
+                      int *swap_disp, int *tms_disp, int *tmp_disp, int * lists_disp, int * ram_disp, PCB *execution_pcb)
 {
   int c = 0; // Carácter introducido por el usuario
   // Si se presionó una tecla en la terminal (kbhit)
@@ -59,7 +59,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
       evaluate_command(gui, exited, buffers[0], execution, ready, finished,
-                       new, tms, swap, swap_disp, tms_disp, tmp_disp, lists_disp);
+                       new, tms, swap, swap_disp, tms_disp, tmp_disp, lists_disp, ram_disp);
       // Se crea historial
       create_history(gui, buffers, index, index_history);
       // Se imprimen los buffers de historial
@@ -187,9 +187,17 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
     }
     else if (c == KEY_F(5)) // Retrocede RAM (F5)
     {
+      if((*ram_disp) > 0){
+        (*ram_disp)--;
+      }
+      print_ram(gui->inner_ram, *ram_disp);
     }
     else if (c == KEY_F(6)) // Avanza RAM (F6)
     {
+      if((*ram_disp) < TOTAL_DISP_RAM ){
+        (*ram_disp)++;
+      }
+      print_ram(gui->inner_ram, *ram_disp);
     }
     else if (c == KEY_F(7)) // Retrocede SWAP (F7)
     {
@@ -487,7 +495,7 @@ int confirm_exit(GUI *gui)
 
 // Evalúa los comandos ingresados por el usuario
 void evaluate_command(GUI *gui, int *exited, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                      TMS *tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp, int *lists_disp)
+                      TMS *tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp, int *lists_disp, int *ram_disp)
 {
   /* TOKENS */
   char command[256] = {0};    // Almacena el comando ingresado

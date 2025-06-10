@@ -9,7 +9,7 @@
 #include "gui.h"
 #include "queue.h"
 
-char RAM[RAM_SIZE][INSTRUCTION_SIZE];
+char RAM[RAM_SIZE][INSTRUCTION_SIZE] = {0};
 
 /* Crear un archivo lleno de ceros al inicio del programa,
    para el manejo de memoria de intercambio (swap) */
@@ -53,6 +53,14 @@ void initialize_tms(TMS *tms)
 {
   memset(tms->table, 0, sizeof(int) * MAX_PAGES);
   tms->available_pages = MAX_PAGES;
+}
+
+// Inicializa la tabla de marcos de memoria (TMM)
+void initialize_tmm(TMM *tmm)
+{
+  memset(tmm->table, 0, sizeof(int) * RAM_SIZE / PAGE_SIZE);
+  memset(tmm->referenced, 0, sizeof(int) * RAM_SIZE / PAGE_SIZE);
+  tmm->available_pages = RAM_SIZE / PAGE_SIZE;
 }
 
 // Lee una línea del archivo y la almacena en el buffer

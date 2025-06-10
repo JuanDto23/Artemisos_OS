@@ -47,6 +47,12 @@ typedef struct tmm TMM;
 #define WIDTH_SWAP 120
 #define HEIGHT_SWAP 19
 
+//RAM
+#define STARTX_RAM 28
+#define STARTY_RAM 19
+#define WIDTH_RAM 55
+#define HEIGHT_RAM 19
+
 // TMS
 #define STARTX_TMS 2
 #define STARTY_TMS 19
@@ -60,9 +66,9 @@ typedef struct tmm TMM;
 #define HEIGHT_TMM 19
 
 // TMP
-#define STARTX_TMP (2 * WIDTH_CPU / 3 + 7)
-#define STARTY_TMP 5  // PAra que esté a la misma altura del procesador
-#define WIDTH_TMP 14
+#define STARTX_TMP (2 * WIDTH_CPU / 3 + 6)
+#define STARTY_TMP 5
+#define WIDTH_TMP 23
 #define HEIGHT_TMP 8
  
 // KEYS
@@ -74,7 +80,9 @@ typedef struct tmm TMM;
 // Parámetros de desplazamientos
 #define TOTAL_DISP_SWAP 682 // 4096 / 6 = 682
 #define TOTAL_DISP_TMS 255  // 4096 / 16 = 255
+#define TOTAL_DISP_RAM 7 //
 #define DISPLAYED_PAGES_SWAP 6 // Cantidad de páginas que se muestran en la SWAP
+#define PAGES_RAM 2 // Cantidad de páginas que se muestran en la RAM
 #define DISPLAYED_PAGES_TMS 16 // Cantidad de páginas que se muestran en la TMS
 #define DISPLAYED_ADRESSES_TMP HEIGHT_TMP - 3 // Cantidad de direcciones que se muestran en la TMP
 
@@ -93,6 +101,8 @@ typedef struct gui
   WINDOW *inner_ginfo;
   WINDOW *swap;
   WINDOW *inner_swap;
+  WINDOW *ram;
+  WINDOW *inner_ram;
   WINDOW *tms;
   WINDOW *inner_tms;
   WINDOW *tmm;
@@ -112,6 +122,7 @@ void print_processor(WINDOW *inner_cpu, PCB *pcb);
 void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new, Queue finished, int lists_disp);
 void print_ginfo(WINDOW *inner_ginfo, Queue execution);
 void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp);
+void print_ram(WINDOW *inner_ram, int ram_disp);
 void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp);
 void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp);
 void print_tmm(WINDOW *inner_tmm, TMM tmm);

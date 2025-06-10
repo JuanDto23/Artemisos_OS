@@ -40,6 +40,9 @@ void create_swap(FILE **swap);
 // Función para inicializar la tabla de memoria swap (TMS)
 void initialize_tms(TMS *tms);
 
+// Función para inicializar la tabla de marcos de memoria (TMM)
+void initialize_tmm(TMM *tmm);
+
 // Funciones para leer desde un archivo o desde la SWAP
 void read_line_from_file(FILE *file, char *buffer);
 void read_inst_from_swap(FILE *swap, char *line, PCB *execution_pcb);

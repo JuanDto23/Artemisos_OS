@@ -26,6 +26,9 @@ void initialize_gui(GUI *gui)
   // SWAP
   gui->swap = newwin(HEIGHT_SWAP, WIDTH_SWAP, STARTY_SWAP, STARTX_SWAP);
   gui->inner_swap = derwin(gui->swap, HEIGHT_SWAP - 2, WIDTH_SWAP - 2, 1, 1);
+  // RAM
+  gui->ram = newwin(HEIGHT_RAM, WIDTH_RAM, STARTY_RAM, STARTX_RAM);
+  gui->inner_ram = derwin(gui->ram, HEIGHT_RAM - 2, WIDTH_RAM - 2, 1, 1);
   // TMS
   gui->tms = newwin(HEIGHT_TMS, WIDTH_TMS, STARTY_TMS, STARTX_TMS);
   gui->inner_tms = derwin(gui->tms, HEIGHT_TMS - 2, WIDTH_TMS - 2, 1, 1);
@@ -46,6 +49,7 @@ void initialize_gui(GUI *gui)
   box(gui->queues, 0, 0);
   box(gui->ginfo, 0, 0);
   box(gui->swap, 0, 0);
+  box(gui->ram, 0, 0);
   box(gui->tms, 0, 0);
   box(gui->tmm, 0, 0);
   box(gui->tmp, 0, 0);
@@ -58,6 +62,7 @@ void initialize_gui(GUI *gui)
   mvwprintw(gui->msg, 0, (WIDTH_MSG - strlen("MENSAJES")) / 2, "%s", "MENSAJES");
   mvwprintw(gui->ginfo, 0, (WIDTH_GINFO - strlen("INFO GENERAL")) / 2, "%s", "INFO GENERAL");
   mvwprintw(gui->swap, 0, (WIDTH_SWAP - strlen("SWAP")) / 2, "%s", "SWAP");
+  mvwprintw(gui->ram, 0, (WIDTH_RAM - strlen("RAM")) / 2, "%s", "RAM");
   mvwprintw(gui->tms, 0, (WIDTH_TMS - strlen("TMS")) / 2, "%s", "TMS");
   mvwprintw(gui->tmm, 0, (WIDTH_TMM - strlen("TMM")) / 2, "%s", "TMM");
   mvwprintw(gui->tmp, 0, (WIDTH_TMP - strlen("TMP")) / 2, "%s", "TMP");
@@ -73,6 +78,7 @@ void initialize_gui(GUI *gui)
   wrefresh(gui->queues);
   wrefresh(gui->ginfo);
   wrefresh(gui->swap);
+  wrefresh(gui->ram);
   wrefresh(gui->tms);
   wrefresh(gui->tmm);
   wrefresh(gui->tmp);
@@ -368,6 +374,36 @@ void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp)
   wrefresh(inner_swap);
 }
 
+// Imprime el contenido de la RAM con desplazamiento
+void print_ram(WINDOW *inner_ram, int ram_disp)
+{
+  // Se limpia la subventana de Información General de la RAM
+  werase(inner_ram);
+  // Muestra información general fija de la RAM
+  mvwprintw(inner_ram, 0, (WIDTH_RAM - strlen("[16] Marcos * [16] Inst * [32] Bytes = [8192] Bytes")) / 2, "[16] Marcos * [16]Inst * [32] Bytes = [8192] Bytes");
+  
+  int instructions_per_disp = PAGE_SIZE * PAGES_RAM; // Instrucciones que llenan toda una ventana de RAM
+  
+  // Recorrer paginas (columnas)
+  for (int page = 0; page < PAGES_RAM; page++)
+  { 
+    // Recorrer instrucciones (renglones)
+    for (int instruction = 0; instruction < PAGE_SIZE; instruction++)
+    {
+      //fread(buffer, sizeof(char), INSTRUCTION_JUMP, swap);
+      
+      // Imprime las instrucciones guardadas en la SWAP junto con su dirección
+     // mvwprintw(inner_ram, instruction + 1, ((page + 1) * WIDTH_SWAP / 6) - 20, "[%02X]%.12s", (ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction, RAM[instruction]);
+      mvwprintw(inner_ram, instruction + 1, ((page + 1) * WIDTH_RAM / 2)-27, "[%02X]%.12s", (ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction, RAM[instruction]);
+
+    }
+  }
+  
+
+  // Refresca la subventana de RAM
+  wrefresh(inner_ram);
+}
+
 // Imprime el contenido de la TMS con desplazamiento
 void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp)
 {
@@ -398,7 +434,7 @@ void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp)
   werase(inner_tmp);
 
   // Muestra el mensaje de "Mrc  EnSWAP"
-  mvwprintw(inner_tmp, 0, 0, "Mrc  EnSWAP");
+  mvwprintw(inner_tmp, 0, 0, "Mrc EnRAM Pres EnSWAP ");
 
   // Si el PCB es nulo, no se imprime nada y se limpió la lsita de direcciones
   if (!pcb)
@@ -431,13 +467,10 @@ void print_tmm(WINDOW *inner_tmm, TMM tmm)
   // Muestra el mensaje de "Marco-PID"
   mvwprintw(inner_tmm, 0, 0, "Mr-PID-Pr");
 
-  int index_tmm=0;
-
   // Imprime las páginas de la TMM conforme al desplazamiento
   for (int page = 0; page < DISPLAYED_PAGES_TMS; page++)
   {
-    mvwprintw(inner_tmm, page + 1, 0, "%X ", index_tmm);
-    index_tmm++;
+    mvwprintw(inner_tmm, page + 1, 0, "%X  %d  %d", page, tmm.table[page], tmm.referenced[page]);
   }
 
   // Refresca la subventana de TMS

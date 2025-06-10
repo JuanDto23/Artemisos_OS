@@ -33,7 +33,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
                      int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished, Queue *new,
                      unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE ** swap,
-                     int *swap_disp, int *tms_disp, int * tmp_disp,  int * lists_disp, PCB *execution_pcb);
+                     int *swap_disp, int *tms_disp, int * tmp_disp,  int * lists_disp, int *ram_disp,  PCB *execution_pcb);
 
 // Funciones para la interpretación de comando de la prompt
 void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *ready, Queue *new, Queue *finished,
@@ -43,6 +43,6 @@ void kill_command(char *parameter1, Queue *execution, Queue *ready, Queue *new, 
 void exit_command(int *exited, GUI *gui, Queue *execution, Queue *ready, Queue *new, Queue *finished);
 int confirm_exit(GUI *gui);
 void evaluate_command(GUI *gui, int *exited, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     TMS *tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp, int *lists_disp);
+                     TMS *tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp, int *lists_disp,int *ram_disp);
 
 #endif
