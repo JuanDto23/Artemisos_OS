@@ -7,11 +7,12 @@ typedef struct pcb PCB;
 typedef struct gui GUI;
 
 // Parámetros de memoria
-#define MAX_PAGES 4096
+#define MAX_PAGES_SWAP 4096
 #define PAGE_SIZE 16
 #define INSTRUCTION_SIZE 32
 #define SWAP_SIZE 65536
 #define RAM_SIZE 256
+#define MAX_PAGES_RAM 16
 
 // Se definen los offsets para el acceso a la memoria
 #define PAGE_JUMP 0x200
@@ -20,14 +21,14 @@ typedef struct gui GUI;
 // Definición de la tabla de memoria swap (TMS)
 typedef struct tms
 {
-  int table[MAX_PAGES];
+  int table[MAX_PAGES_SWAP];
   int available_pages;
 } TMS;
 
 typedef struct tmm
 {
-  int table[RAM_SIZE / PAGE_SIZE];
-  int referenced[RAM_SIZE / PAGE_SIZE];
+  int table[MAX_PAGES_RAM];
+  int referenced[MAX_PAGES_RAM];
   int available_pages;
 } TMM;
 
@@ -43,9 +44,10 @@ void initialize_tms(TMS *tms);
 // Función para inicializar la tabla de marcos de memoria (TMM)
 void initialize_tmm(TMM *tmm);
 
-// Funciones para leer desde un archivo o desde la SWAP
+// Funciones para leer desde un archivo o desde la SWAP y RAM
 void read_line_from_file(FILE *file, char *buffer);
-void read_inst_from_swap(FILE *swap, char *line, PCB *execution_pcb);
+void read_inst_from_swap(FILE *swap, char *instruction, PCB *execution_pcb);
+void read_inst_from_ram(char *instruction, PCB * execution_pcb);
 
 // Función para cargar instrucciones en la SWAP y registrar en TMS los marcos ocupados por el proceso
 void load_to_swap(PCB *new_process, TMS *tms, FILE **swap, int lines);

@@ -391,11 +391,9 @@ void print_ram(WINDOW *inner_ram, int ram_disp)
     for (int instruction = 0; instruction < PAGE_SIZE; instruction++)
     {
       //fread(buffer, sizeof(char), INSTRUCTION_JUMP, swap);
-      
       // Imprime las instrucciones guardadas en la SWAP junto con su dirección
      // mvwprintw(inner_ram, instruction + 1, ((page + 1) * WIDTH_SWAP / 6) - 20, "[%02X]%.12s", (ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction, RAM[instruction]);
       mvwprintw(inner_ram, instruction + 1, ((page + 1) * WIDTH_RAM / 2)-27, "[%02X]%.12s", (ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction, RAM[instruction]);
-
     }
   }
   
@@ -450,7 +448,7 @@ void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp)
   // Imprime las direcciones de la TMP conforme al desplazamiento
   for (int address = 0; (tmp_disp * (DISPLAYED_ADRESSES_TMP) + address) < pcb->TmpSize && address < DISPLAYED_ADRESSES_TMP; address++)
   {
-    mvwprintw(inner_tmp, address + 1, 0, "%03X,  %03X", index_tmp, pcb->TMP[index_tmp]);
+    mvwprintw(inner_tmp, address + 1, 0, "%03X,  %03X", index_tmp, pcb->tmp.inSWAP[index_tmp]);
     index_tmp++;
   }
 
@@ -518,11 +516,10 @@ void print_traduction(WINDOW *inner_msg, PCB *current_process)
 
   mvwprintw(inner_msg, 0, 0, "Traduciendo dirección para PID:[%d].", current_process->pid);
 
-  int base_page_address = current_process->TMP[current_process->PC / PAGE_SIZE] * PAGE_SIZE;
-  int offset = current_process->PC % 16;
-  int real_address = base_page_address | offset;
+  Address address = address_traduction(current_process);
 
-  mvwprintw(inner_msg, 2, 0, "PC:[%d] -> SWAP:[0x%X | 0x%X = 0x%X].", current_process->PC, base_page_address, offset, real_address);
+  
+  mvwprintw(inner_msg, 2, 0, "PC:[%d] -> SWAP:[0x%X | 0x%X = 0x%X].", current_process->PC, address.base_page, address.offset, address.real);
 
   // Se refresca la subventana de mensajes
   wrefresh(inner_msg);

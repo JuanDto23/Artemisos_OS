@@ -78,9 +78,9 @@ typedef struct tmm TMM;
 #define HEIGHT_KEYS 3
 
 // Parámetros de desplazamientos
-#define TOTAL_DISP_SWAP 682 // 4096 / 6 = 682
-#define TOTAL_DISP_TMS 255  // 4096 / 16 = 255
-#define TOTAL_DISP_RAM 7 //
+#define TOTAL_DISP_SWAP 682 
+#define TOTAL_DISP_TMS 255  
+#define TOTAL_DISP_RAM 7 
 #define DISPLAYED_PAGES_SWAP 6 // Cantidad de páginas que se muestran en la SWAP
 #define PAGES_RAM 2 // Cantidad de páginas que se muestran en la RAM
 #define DISPLAYED_PAGES_TMS 16 // Cantidad de páginas que se muestran en la TMS

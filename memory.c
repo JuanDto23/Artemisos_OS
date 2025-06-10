@@ -51,8 +51,8 @@ void create_swap(FILE **swap)
 // Cuenta los marcos disponibles en SWAP (puede haber marcos dispersos)
 void initialize_tms(TMS *tms)
 {
-  memset(tms->table, 0, sizeof(int) * MAX_PAGES);
-  tms->available_pages = MAX_PAGES;
+  memset(tms->table, 0, sizeof(int) * MAX_PAGES_SWAP);
+  tms->available_pages = MAX_PAGES_SWAP;
 }
 
 // Inicializa la tabla de marcos de memoria (TMM)
@@ -77,7 +77,7 @@ void read_line_from_file(FILE *file, char *buffer)
   buffer[i] = '\0'; // Marcador para detener la escritura del contenido del buffer, en la SWAP
 }
 
-// Lee una instrucción de la SWAP y la almacena en un buffer de línea
+// Lee una instrucción de la SWAP y la almacena en un buffer de instrucción
 void read_inst_from_swap(FILE *swap, char *instruction, PCB *execution_pcb)
 {
   /*
@@ -97,7 +97,7 @@ void read_inst_from_swap(FILE *swap, char *instruction, PCB *execution_pcb)
   int offset = execution_pcb->PC % PAGE_SIZE;
 
   // Marco en SWAP de la TMP para el marco calculado (index_page_from_tms)
-  int page_from_swap = execution_pcb->TMP[index_page_from_tms];
+  int page_from_swap = execution_pcb->tmp.inSWAP[index_page_from_tms];
 
   // Se obtiene la dirección real en SWAP (DRS)
   int drs = page_from_swap * PAGE_JUMP | offset * INSTRUCTION_JUMP;
@@ -106,6 +106,21 @@ void read_inst_from_swap(FILE *swap, char *instruction, PCB *execution_pcb)
   fseek(swap, drs, SEEK_SET);
   // Se almacena la siguiente instrucción en el buffer
   fread(instruction, sizeof(char), INSTRUCTION_JUMP, swap);
+}
+
+/* Lee una instrucción de la RAM, almacena la instrucción en el buffer instruction y realiza
+   las acciones necesarias cuando la página de la instrucción no se encuentra en RAM (fallo de pagión) */
+void read_inst_from_ram(char *instruction, PCB * execution_pcb, TMM * tmm)
+{
+  Address address_instruction = {0};
+  if(!execution_pcb)
+    return;
+  address_instruction = address_traduction(execution_pcb);  // Se traduce la dirección virtual (PC) a la real en RAM 
+  // execution_pcb->tmp.inRAM[PC%16] = 0 ;
+  if(execution_pcb->tmp.inRAM[address_instruction.base_page] && execution_pcb->tmp.ram_presence[address_instruction.base_page])  // Se verifica que el marco se encuentra cargado en RAM
+  {  
+    
+  }
 }
 
 // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
@@ -117,7 +132,7 @@ void load_to_swap(PCB *new_process, TMS *tms, FILE **swap, int lines)
   char clear_instruction_space[INSTRUCTION_SIZE] = {0};
 
   // Recorre la TMS en busca de marcos disponibles
-  for (int i = 0; i < MAX_PAGES; i++)
+  for (int i = 0; i < MAX_PAGES_SWAP; i++)
   {
     // Si el proceso ya no necesita más marcos, termina
     if (!pages_needed)
@@ -161,7 +176,7 @@ void load_to_swap(PCB *new_process, TMS *tms, FILE **swap, int lines)
       // Se marca la página ocupada en la TMS con el pid del proceso
       tms->table[i] = new_process->pid;
       // Registrar dirección del marco del proceso en la SWAP
-      new_process->TMP[k++] = i;
+      new_process->tmp.inSWAP[k++] = i;
       // Como ya se escribió en un marco, se decrementa el número de marcos necesitados por el proceso
       pages_needed--;
       // Se disminuye la cantidad de marcos disponibles
@@ -178,7 +193,7 @@ void load_to_ready(PCB *process, Queue *ready, TMS *tms, FILE **swap)
   enqueue(process, ready);
 
   // Se reserva espacio para la TMP del proceso
-  process->TMP = (int *)malloc(sizeof(int) * process->TmpSize);
+  process->tmp.inSWAP = (int *)malloc(sizeof(int) * process->TmpSize);
 
   // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
   load_to_swap(process, tms, swap, process->lines);
@@ -194,7 +209,7 @@ void free_pages_from_tms(PCB *process_finished, TMS *tms)
 {
   for (int i = 0; i < process_finished->TmpSize; i++)
   {
-    tms->table[process_finished->TMP[i]] = 0;
+    tms->table[process_finished->tmp.inRAM[i]] = 0;
     (tms->available_pages)++;
   }
 }
@@ -204,6 +219,6 @@ void update_pages_from_tms(PCB *brothe_process, TMS *tms)
 {
   for (int i = 0; i < brothe_process->TmpSize; i++)
   {
-    tms->table[brothe_process->TMP[i]] = brothe_process->pid;
+    tms->table[brothe_process->tmp.inRAM[i]] = brothe_process->pid;
   }
 }

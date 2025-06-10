@@ -117,8 +117,9 @@ void run_simulator(void)
     // Si se alcanzó el MAX_TIME se ejecuta la instrucción
     else
     {
-      // Se lee una instrucción del proceso en ejecución desde la SWAP
-      read_inst_from_swap(swap, instruction, execution.head);
+      // Se lee una instrucción del proceso en ejecución desde la RAM
+      read_inst_from_ram(instruction, execution.head);
+      //read_inst_from_swap(swap, instruction, execution.head);
 
       /* Si no hay más instrucciones del proceso en ejecución, esto es,
       si no se encuentra END, lo que representa un error*/

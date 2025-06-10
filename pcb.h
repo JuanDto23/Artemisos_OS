@@ -7,6 +7,20 @@
 typedef struct queue Queue;
 typedef struct gui GUI;
 
+typedef struct tmp 
+{
+  int * inSWAP;
+  int inRAM[MAX_PAGES_RAM];  
+  bool ram_presence[MAX_PAGES_RAM];
+}TMP;
+
+typedef struct address
+{
+  int real;
+  int base_page;
+  int offset;
+} Address;
+
 /* Sirve de referencia para indicar la cantidad
    máxima de instrucciones consecutivas que se
    podrán ejecutar por cada proceso */
@@ -34,7 +48,7 @@ typedef struct pcb
 
   // Parámetros de la memoria
   int TmpSize; // Tamaño de la TMP (cantidad de marcos del proceso)
-  int *TMP;    // Tabla de mapa/marcos de proceso
+  TMP tmp;     // Tabla de mapa/marcos de proceso
   int lines;   // Cantidad de líneas del programa del proceso
 } PCB;
 
@@ -62,4 +76,6 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
 // Función para recalcular prioridades
 void recalculate_priorities(GUI *gui, Queue ready, int *minor_priority);
 
+// Función para obtener la dirección real en RAM
+Address address_traduction(PCB * current_process);
 #endif

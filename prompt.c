@@ -320,7 +320,7 @@ void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *r
   if ((brother_process = search_brother_process(new_process->UID, new_process->file_name, *execution))) // Brother en Ejecución
   {
     // Asignar la misma TMP al nuevo proceso
-    new_process->TMP = brother_process->TMP;
+    new_process->tmp = brother_process->tmp;
     // Inserta el nodo en la cola Listos
     enqueue(new_process, ready);
     // Se imprime mensaje de proceso copiado
@@ -334,7 +334,7 @@ void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *r
   else if ((brother_process = search_brother_process(new_process->UID, new_process->file_name, *ready))) // Brother en Listos
   {
     // Asignar la misma TMP al nuevo proceso
-    new_process->TMP = brother_process->TMP;
+    new_process->tmp = brother_process->tmp;
     // Inserta el nodo en la cola Listos
     enqueue(new_process, ready);
     // Se imprime mensaje de proceso copiado

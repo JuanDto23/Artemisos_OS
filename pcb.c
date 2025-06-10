@@ -316,9 +316,9 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
     // Establecer sus marcos de SWAP cómo libres en la TMS
     free_pages_from_tms(current_process, tms);
     // Liberar la memoria que ocupe la TMP asociada
-    free(current_process->TMP);
+    free(current_process->tmp.inSWAP);
     // Se pone a NULL la TMP del proceso para evitar puntero colgante
-    current_process->TMP = NULL;
+    current_process->tmp.inSWAP = NULL;
     // Si hay procesos en la lista de Nuevos
     if (new->head)
     {
@@ -339,7 +339,7 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
         while ((brother_process = extract_brother_process(process_fits->UID, process_fits->file_name, new)))
         {
           // Asignar la misma TMP que su hermano
-          brother_process->TMP = process_fits->TMP;
+          brother_process->tmp.inSWAP = process_fits->tmp.inSWAP;
           // Se cierra el archivo del proceso hermano
           fclose(brother_process->program);
           // Se evita puntero colgante
@@ -354,7 +354,6 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
     // Actualiza el PID en TMS para el hermano encontrado que sigue vivo
     update_pages_from_tms(brother_process, tms);
 
-  
   // Se muestran los cambios en la TMS
   print_tms(gui->inner_tms, *tms, tms_disp);
 }
@@ -376,4 +375,16 @@ void recalculate_priorities(GUI *gui, Queue ready, int *minor_priority)
   wrefresh(gui->inner_msg);
   // Se espera 2 segundos para que el usuario pueda leer el mensaje
   sleep(2);
+}
+
+Address address_traduction(PCB *current_process)
+{
+  Address address = {0};
+  if (current_process)
+  {
+    address.base_page = current_process->tmp.inRAM[current_process->PC % PAGE_SIZE] * PAGE_SIZE;
+    address.offset = current_process->PC % PAGE_SIZE;
+    address.real = address.base_page | address.offset;
+  }
+  return address;
 }

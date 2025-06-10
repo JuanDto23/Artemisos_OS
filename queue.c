@@ -41,7 +41,7 @@ PCB *create_pcb(int pid, char *file_name, FILE **program, int uid, int TmpSize, 
 
     // Inicialización de parámetros de memoria
     pcb->TmpSize = TmpSize;
-    pcb->TMP = NULL;
+    pcb->tmp.inSWAP= NULL;
     pcb->lines = lines;
   }
 
