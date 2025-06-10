@@ -13,7 +13,7 @@ void initialize_gui(GUI *gui)
   gui->inner_prompt = derwin(gui->prompt, HEIGHT_PROMPT - 2, WIDTH_PROMPT - 2, 1, 1);
   // CPU
   gui->cpu = newwin(HEIGHT_CPU, WIDTH_CPU, STARTY_CPU, STARTX_CPU);
-  gui->inner_cpu = derwin(gui->cpu, HEIGHT_CPU - 2, WIDTH_CPU - 2, 1, 1);
+  gui->inner_cpu = derwin(gui->cpu, HEIGHT_CPU - 2, STARTX_TMP - 3, 1, 1);
   // Mensajes
   gui->msg = newwin(HEIGHT_MSG, WIDTH_MSG, STARTY_MSG, STARTX_MSG);
   gui->inner_msg = derwin(gui->msg, HEIGHT_MSG - 2, WIDTH_MSG - 2, 1, 1);
@@ -29,6 +29,9 @@ void initialize_gui(GUI *gui)
   // TMS
   gui->tms = newwin(HEIGHT_TMS, WIDTH_TMS, STARTY_TMS, STARTX_TMS);
   gui->inner_tms = derwin(gui->tms, HEIGHT_TMS - 2, WIDTH_TMS - 2, 1, 1);
+  // TMM
+  gui->tmm = newwin(HEIGHT_TMM, WIDTH_TMM, STARTY_TMM, STARTX_TMM);
+  gui->inner_tmm = derwin(gui->tmm, HEIGHT_TMM - 2, WIDTH_TMM - 2, 1, 1);
   // TMP
   gui->tmp = newwin(HEIGHT_TMP, WIDTH_TMP, STARTY_TMP, STARTX_TMP);
   gui->inner_tmp = derwin(gui->tmp, HEIGHT_TMP - 2, WIDTH_TMP - 2, 1, 1);
@@ -44,6 +47,7 @@ void initialize_gui(GUI *gui)
   box(gui->ginfo, 0, 0);
   box(gui->swap, 0, 0);
   box(gui->tms, 0, 0);
+  box(gui->tmm, 0, 0);
   box(gui->tmp, 0, 0);
   box(gui->keys, 0, 0);
 
@@ -55,6 +59,7 @@ void initialize_gui(GUI *gui)
   mvwprintw(gui->ginfo, 0, (WIDTH_GINFO - strlen("INFO GENERAL")) / 2, "%s", "INFO GENERAL");
   mvwprintw(gui->swap, 0, (WIDTH_SWAP - strlen("SWAP")) / 2, "%s", "SWAP");
   mvwprintw(gui->tms, 0, (WIDTH_TMS - strlen("TMS")) / 2, "%s", "TMS");
+  mvwprintw(gui->tmm, 0, (WIDTH_TMM - strlen("TMM")) / 2, "%s", "TMM");
   mvwprintw(gui->tmp, 0, (WIDTH_TMP - strlen("TMP")) / 2, "%s", "TMP");
   mvwprintw(gui->keys, 0, (WIDTH_KEYS - strlen("TECLAS ESPECIALES")) / 2, "%s", "TECLAS ESPECIALES");
 
@@ -69,6 +74,7 @@ void initialize_gui(GUI *gui)
   wrefresh(gui->ginfo);
   wrefresh(gui->swap);
   wrefresh(gui->tms);
+  wrefresh(gui->tmm);
   wrefresh(gui->tmp);
   wrefresh(gui->keys);
 }
@@ -113,12 +119,12 @@ void print_processor(WINDOW *inner_cpu, PCB *pcb)
   mvwprintw(inner_cpu, 4, 0, "P:[%d]", pcb->P);
   mvwprintw(inner_cpu, 5, 0, "KCPU:[%d]", pcb->KCPU);
   // Parte derecha
-  mvwprintw(inner_cpu, 0, WIDTH_CPU / 2, "PC:[%d]=[0x%04X] ", pcb->PC, pcb->PC);
-  mvwprintw(inner_cpu, 1, WIDTH_CPU / 2, "IR:[%s]", pcb->IR);
-  mvwprintw(inner_cpu, 2, WIDTH_CPU / 2, "PID:[%d]", pcb->pid);
-  mvwprintw(inner_cpu, 3, WIDTH_CPU / 2, "NAME:[%s]", pcb->file_name);
-  mvwprintw(inner_cpu, 4, WIDTH_CPU / 2, "UID:[%d]", pcb->UID);
-  mvwprintw(inner_cpu, 5, WIDTH_CPU / 2, "KCPUxU:[%d]", pcb->KCPUxU);
+  mvwprintw(inner_cpu, 0, WIDTH_CPU / 3, "PC:[%d]=[0x%04X] ", pcb->PC, pcb->PC);
+  mvwprintw(inner_cpu, 1, WIDTH_CPU / 3, "IR:[%s]", pcb->IR);
+  mvwprintw(inner_cpu, 2, WIDTH_CPU / 3, "PID:[%d]", pcb->pid);
+  mvwprintw(inner_cpu, 3, WIDTH_CPU / 3, "NAME:[%s]", pcb->file_name);
+  mvwprintw(inner_cpu, 4, WIDTH_CPU / 3, "UID:[%d]", pcb->UID);
+  mvwprintw(inner_cpu, 5, WIDTH_CPU / 3, "KCPUxU:[%d]", pcb->KCPUxU);
 
   // Refrescar subventana del CPU
   wrefresh(inner_cpu);
@@ -416,6 +422,27 @@ void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp)
   wrefresh(inner_tmp);
 }
 
+// Imprime el contenido de la TMM con desplazamiento
+void print_tmm(WINDOW *inner_tmm, TMM tmm) 
+{
+  // Se limpia la subventana de la TMS
+  werase(inner_tmm);
+
+  // Muestra el mensaje de "Marco-PID"
+  mvwprintw(inner_tmm, 0, 0, "Mr-PID-Pr");
+
+  int index_tmm=0;
+
+  // Imprime las páginas de la TMM conforme al desplazamiento
+  for (int page = 0; page < DISPLAYED_PAGES_TMS; page++)
+  {
+    mvwprintw(inner_tmm, page + 1, 0, "%X ", index_tmm);
+    index_tmm++;
+  }
+
+  // Refresca la subventana de TMS
+  wrefresh(inner_tmm);
+}
 // Imprime el historial de comandos en la subventana de prompt
 void print_history(char buffers[HISTORY_SIZE][PROMPT_SIZE], WINDOW *inner_prompt)
 {

@@ -7,13 +7,14 @@
 typedef struct pcb PCB;
 typedef struct queue Queue;
 typedef struct tms TMS;
+typedef struct tmm TMM;
 
 // ============= MACROS =============
 
 // PROMT
 #define STARTX_PROMPT 2
 #define STARTY_PROMPT 0
-#define WIDTH_PROMPT 81
+#define WIDTH_PROMPT 81 
 #define HEIGHT_PROMPT 5
 
 // PROCESADOR
@@ -52,12 +53,18 @@ typedef struct tms TMS;
 #define WIDTH_TMS 12
 #define HEIGHT_TMS 19
 
+// TMM
+#define STARTX_TMM 15
+#define STARTY_TMM 19
+#define WIDTH_TMM 12
+#define HEIGHT_TMM 19
+
 // TMP
-#define STARTX_TMP 16
-#define STARTY_TMP 19
+#define STARTX_TMP (2 * WIDTH_CPU / 3 + 7)
+#define STARTY_TMP 5  // PAra que esté a la misma altura del procesador
 #define WIDTH_TMP 14
 #define HEIGHT_TMP 8
-
+ 
 // KEYS
 #define STARTX_KEYS 2
 #define STARTY_KEYS 38
@@ -88,6 +95,8 @@ typedef struct gui
   WINDOW *inner_swap;
   WINDOW *tms;
   WINDOW *inner_tms;
+  WINDOW *tmm;
+  WINDOW *inner_tmm;
   WINDOW *tmp;
   WINDOW *inner_tmp;
   WINDOW *keys;
@@ -105,6 +114,8 @@ void print_ginfo(WINDOW *inner_ginfo, Queue execution);
 void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp);
 void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp);
 void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp);
+void print_tmm(WINDOW *inner_tmm, TMM tmm);
+
 void print_history(char buffers[HISTORY_SIZE][PROMPT_SIZE], WINDOW *inner_prompt);
 
 // Función para imprimir procesador vacío

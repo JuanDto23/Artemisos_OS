@@ -24,6 +24,13 @@ typedef struct tms
   int available_pages;
 } TMS;
 
+typedef struct tmm
+{
+  int table[RAM_SIZE / PAGE_SIZE];
+  int referenced[RAM_SIZE / PAGE_SIZE];
+  int available_pages;
+} TMM;
+
 // Se crea un bloque de almacenamiento continuo RAM
 extern char RAM[RAM_SIZE][INSTRUCTION_SIZE];
 

@@ -43,6 +43,7 @@ void run_simulator(void)
   // Variables de manejo de memoria
   FILE *swap = NULL; // Bloque contiguo de almacenamiento binario en disco duro
   TMS tms;           // Estructura con tabla de marcos de SWAP y número de páginas disponibles
+  TMM tmm;
 
   // Variables para la navegacción de la SWAP, TMS, TMP y Listas
   int swap_disp = 0;  // Desplazamiento de SWAP
@@ -74,6 +75,7 @@ void run_simulator(void)
   initialize_tms(&tms);                                                        // Inicializar tabla TMS (arreglo en ceros y páginas máximas)
   print_tms(gui.inner_tms, tms, tms_disp);                                     // Imprime el contenido de la TMS con desplazamiento
   print_tmp(gui.inner_tmp, execution.head, tmp_disp);                          // Imprime el contenido de la TMP con desplazamiento
+  print_tmm(gui.inner_tmm, tmm);                                     // Imprime el contenido de la TMS con desplazamiento
 
   // Ciclo principal del simulador
   do
