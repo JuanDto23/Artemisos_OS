@@ -118,7 +118,7 @@ void run_simulator(void)
     else
     {
       // Se lee una instrucción del proceso en ejecución desde la RAM
-      read_inst_from_ram(instruction, execution.head);
+      read_inst_from_ram(instruction, execution.head,&tmm, swap);
       //read_inst_from_swap(swap, instruction, execution.head);
 
       /* Si no hay más instrucciones del proceso en ejecución, esto es,

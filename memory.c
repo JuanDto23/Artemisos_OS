@@ -110,25 +110,64 @@ void read_inst_from_swap(FILE *swap, char *instruction, PCB *execution_pcb)
 
 /* Lee una instrucción de la RAM, almacena la instrucción en el buffer instruction y realiza
    las acciones necesarias cuando la página de la instrucción no se encuentra en RAM (fallo de pagión) */
-void read_inst_from_ram(char *instruction, PCB * execution_pcb, TMM * tmm)
+void read_inst_from_ram(char *instruction, PCB *execution_pcb, TMM *tmm, FILE *swap)
 {
   Address address_instruction = {0};
-  if(!execution_pcb)
+  if (!execution_pcb)
     return;
-  address_instruction = address_traduction(execution_pcb);  // Se traduce la dirección virtual (PC) a la real en RAM 
-  // execution_pcb->tmp.inRAM[PC%16] = 0 ;
-  if(execution_pcb->tmp.inRAM[address_instruction.base_page] && execution_pcb->tmp.ram_presence[address_instruction.base_page])  // Se verifica que el marco se encuentra cargado en RAM
-  {  
-    
+  // La Dirección Virtual (PC), ahora deberá traducirse a la Dirección Real de la instrucción correspondiente en RAM
+  address_instruction = address_traduction(execution_pcb);
+  // Verificar que la dirección real apunte a un marco que se encuentre cargado en RAM (En SWAP siempre debería estar cargado).
+  // Para verificar que el marco se encuentre cargado en RAM, deberá apoyarse en la TMP (Valor positivo para Marco en RAM y Presencia en 1).
+  if (execution_pcb->tmp.inRAM[address_instruction.base_page] != -1  && execution_pcb->tmp.ram_presence[address_instruction.base_page])
+  {
+    // Nos quedamos AQUÍ -> Necesitamos ejecutar la instrucción
   }
+  else // Fallo de paginación
+  {
+    // Deberá buscar el primer marco libre en RAM, para cargar el proceso.
+    load_to_ram(execution_pcb, tmm, swap, address_instruction);
+  }
+}
+
+void load_to_ram(PCB *pcb_execution, TMM *tmm, FILE *swap, Address address)
+{
+  // Recorre la TMM en busca del primer marco libre en RAM
+  for (int i = 0; i < MAX_PAGES_RAM; i++)
+  {
+    // Página disponible
+    if (!tmm->table[i])
+    {
+      int index_page_from_tms = pcb_execution->PC / PAGE_SIZE;
+      int page_from_swap = pcb_execution->tmp.inSWAP[index_page_from_tms];
+
+      // Copiar el marco en cuestión de la SWAP a la RAM con una sola instrucción fread.7
+      fseek(swap, page_from_swap * PAGE_JUMP, SEEK_SET); // Se ubica el puntero en la swap para leer el marco en la ram
+      fread(RAM[i*PAGE_SIZE], sizeof(char), PAGE_JUMP, swap); // Lee 512 bytes = 1 página
+      
+      // Actualizar la TMM con el PID del proceso que ahora ocupa el marco de RAM
+      tmm->table[i] = pcb_execution->pid;
+
+      // Establecer el indicador de Referencia en 1 (dado que se acaba de utilizar ese marco).
+      tmm->referenced[i] = 1;
+
+      // Actualizar la TMP del proceso, indicando en que marco de la RAM se encuentra el marco actual del proceso.
+      pcb_execution->tmp.inRAM[address.base_page] = i;
+
+      // Y establecer en 1 el valor de presencia (Ya se cargó, ya está presente).
+      pcb_execution->tmp.ram_presence[address.base_page] = 1;
+      return ;
+    } 
+  }
+  // Si no hay marcos libres, deberá desalojar alguno, auxiliado de la TMM y el algoritmo de reloj.
 }
 
 // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
 void load_to_swap(PCB *new_process, TMS *tms, FILE **swap, int lines)
 {
-  int k = 0;                           // Iterador para TMP del nuevo proceso
+  int k = 0;                               // Iterador para TMP del nuevo proceso
   int pages_needed = new_process->TmpSize; // Páginas necesitadas por el proceso
-  char buffer[INSTRUCTION_SIZE] = {0}; // Buffer para la instrucción leída del archivo
+  char buffer[INSTRUCTION_SIZE] = {0};     // Buffer para la instrucción leída del archivo
   char clear_instruction_space[INSTRUCTION_SIZE] = {0};
 
   // Recorre la TMS en busca de marcos disponibles
@@ -192,8 +231,10 @@ void load_to_ready(PCB *process, Queue *ready, TMS *tms, FILE **swap)
   // Cargarlo a Listos
   enqueue(process, ready);
 
-  // Se reserva espacio para la TMP del proceso
+  // Se reserva espacio para la TMP del proceso y se inicializa inRAM y ram_presence
   process->tmp.inSWAP = (int *)malloc(sizeof(int) * process->TmpSize);
+  memset(process->tmp.inRAM, -1, MAX_PAGES_RAM * sizeof(int));  // -1 = La pagina no ha sido mapeada a una dirección real en RAM
+  memset(process->tmp.ram_presence, 0, MAX_PAGES_RAM * sizeof(int)); 
 
   // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
   load_to_swap(process, tms, swap, process->lines);

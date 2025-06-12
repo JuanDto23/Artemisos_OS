@@ -11,7 +11,7 @@ typedef struct tmp
 {
   int * inSWAP;
   int inRAM[MAX_PAGES_RAM];  
-  bool ram_presence[MAX_PAGES_RAM];
+  int ram_presence[MAX_PAGES_RAM];
 }TMP;
 
 typedef struct address

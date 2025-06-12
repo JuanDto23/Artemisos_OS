@@ -5,6 +5,7 @@
 typedef struct queue Queue;
 typedef struct pcb PCB;
 typedef struct gui GUI;
+typedef struct address Address;
 
 // Parámetros de memoria
 #define MAX_PAGES_SWAP 4096
@@ -47,7 +48,10 @@ void initialize_tmm(TMM *tmm);
 // Funciones para leer desde un archivo o desde la SWAP y RAM
 void read_line_from_file(FILE *file, char *buffer);
 void read_inst_from_swap(FILE *swap, char *instruction, PCB *execution_pcb);
-void read_inst_from_ram(char *instruction, PCB * execution_pcb);
+void read_inst_from_ram(char *instruction, PCB * execution_pcb, TMM * tmm, FILE *swap);
+
+// Función para cargar instrucciones en la RAM y registrar en TMM los marcos ocupados por el proceso
+void load_to_ram(PCB * pcb_execution, TMM * tmm, FILE * swap, Address address);
 
 // Función para cargar instrucciones en la SWAP y registrar en TMS los marcos ocupados por el proceso
 void load_to_swap(PCB *new_process, TMS *tms, FILE **swap, int lines);
