@@ -382,7 +382,7 @@ Address address_traduction(PCB *current_process)
   Address address = {0};
   if (current_process)
   {
-    address.base_page = (current_process->tmp.inRAM[current_process->PC / PAGE_SIZE] % MAX_PAGES_RAM) * PAGE_SIZE;
+    address.base_page = current_process->PC / PAGE_SIZE;
     address.offset = current_process->PC % PAGE_SIZE;
     address.real = address.base_page | address.offset;
   }

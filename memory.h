@@ -48,7 +48,7 @@ void initialize_tmm(TMM *tmm);
 // Funciones para leer desde un archivo o desde la SWAP y RAM
 void read_line_from_file(FILE *file, char *buffer);
 void read_inst_from_swap(FILE *swap, char *instruction, PCB *execution_pcb);
-void read_inst_from_ram(char *instruction, PCB * execution_pcb, TMM * tmm, FILE *swap);
+void read_inst_from_ram(GUI *gui, int ram_disp, char *instruction, PCB * execution_pcb, TMM * tmm, FILE *swap);
 
 // Función para cargar instrucciones en la RAM y registrar en TMM los marcos ocupados por el proceso
 void load_to_ram(PCB * pcb_execution, TMM * tmm, FILE * swap, Address address);

@@ -369,7 +369,6 @@ void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp)
       mvwprintw(inner_swap, instruction + 1, ((page + 1) * WIDTH_SWAP / 6) - 20, "[%04X]%.12s", (swap_disp * instructions_per_disp + page * PAGE_SIZE) | instruction, buffer);
     }
   }
-
   // Refresca subventana de swap
   wrefresh(inner_swap);
 }
@@ -390,14 +389,10 @@ void print_ram(WINDOW *inner_ram, int ram_disp)
     // Recorrer instrucciones (renglones)
     for (int instruction = 0; instruction < PAGE_SIZE; instruction++)
     {
-      //fread(buffer, sizeof(char), INSTRUCTION_JUMP, swap);
-      // Imprime las instrucciones guardadas en la SWAP junto con su dirección
-     // mvwprintw(inner_ram, instruction + 1, ((page + 1) * WIDTH_SWAP / 6) - 20, "[%02X]%.12s", (ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction, RAM[instruction]);
-      mvwprintw(inner_ram, instruction + 1, ((page + 1) * WIDTH_RAM / 2)-27, "[%02X]%.12s", (ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction, RAM[instruction]);
+      mvwprintw(inner_ram, instruction + 1, ((page + 1) * WIDTH_RAM / 2)-27, "[%02X]%.12s", (ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction, RAM[(ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction]);
     }
+    
   }
-  
-
   // Refresca la subventana de RAM
   wrefresh(inner_ram);
 }
@@ -420,7 +415,6 @@ void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp)
     mvwprintw(inner_tms, page + 1, 0, "%03X - %d", index_tms, tms.table[index_tms]);
     index_tms++;
   }
-
   // Refresca la subventana de TMS
   wrefresh(inner_tms);
 }
@@ -448,7 +442,7 @@ void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp)
   // Imprime las direcciones de la TMP conforme al desplazamiento
   for (int address = 0; (tmp_disp * (DISPLAYED_ADRESSES_TMP) + address) < pcb->TmpSize && address < DISPLAYED_ADRESSES_TMP; address++)
   {
-    mvwprintw(inner_tmp, address + 1, 0, "%03X,  %03X", index_tmp, pcb->tmp.inSWAP[index_tmp]);
+    mvwprintw(inner_tmp, address + 1, 0, "%03X, %02X, %X, %03X", index_tmp, pcb->tmp.inRAM[index_tmp] & 0xFF, pcb->tmp.ram_presence[index_tmp], pcb->tmp.inSWAP[index_tmp]);
     index_tmp++;
   }
 

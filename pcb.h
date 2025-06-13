@@ -10,8 +10,8 @@ typedef struct gui GUI;
 typedef struct tmp 
 {
   int * inSWAP;
-  int inRAM[MAX_PAGES_RAM];  
-  int ram_presence[MAX_PAGES_RAM];
+  int * inRAM;  
+  int * ram_presence;
 }TMP;
 
 typedef struct address

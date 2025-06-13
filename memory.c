@@ -110,7 +110,7 @@ void read_inst_from_swap(FILE *swap, char *instruction, PCB *execution_pcb)
 
 /* Lee una instrucción de la RAM, almacena la instrucción en el buffer instruction y realiza
    las acciones necesarias cuando la página de la instrucción no se encuentra en RAM (fallo de pagión) */
-void read_inst_from_ram(char *instruction, PCB *execution_pcb, TMM *tmm, FILE *swap)
+void read_inst_from_ram(GUI *gui, int ram_disp, char *instruction, PCB *execution_pcb, TMM *tmm, FILE *swap)
 {
   Address address_instruction = {0};
   if (!execution_pcb)
@@ -119,14 +119,22 @@ void read_inst_from_ram(char *instruction, PCB *execution_pcb, TMM *tmm, FILE *s
   address_instruction = address_traduction(execution_pcb);
   // Verificar que la dirección real apunte a un marco que se encuentre cargado en RAM (En SWAP siempre debería estar cargado).
   // Para verificar que el marco se encuentre cargado en RAM, deberá apoyarse en la TMP (Valor positivo para Marco en RAM y Presencia en 1).
-  if (execution_pcb->tmp.inRAM[address_instruction.base_page] != -1  && execution_pcb->tmp.ram_presence[address_instruction.base_page])
+  if (execution_pcb->tmp.inRAM[address_instruction.base_page] > -1  && execution_pcb->tmp.ram_presence[address_instruction.base_page] == 1)
   {
-    // Nos quedamos AQUÍ -> Necesitamos ejecutar la instrucción
+    // Copiar la instrucción al buffer (instruction)
+    strcpy(instruction, RAM[execution_pcb->tmp.inRAM[address_instruction.base_page]*PAGE_SIZE + address_instruction.offset]);
+    return;
   }
   else // Fallo de paginación
   {
     // Deberá buscar el primer marco libre en RAM, para cargar el proceso.
     load_to_ram(execution_pcb, tmm, swap, address_instruction);
+    // Se llama porque en este punto ya existe un mapeo de marco de la instrucción a ejecutar en RAM
+    read_inst_from_ram(gui, ram_disp, instruction, execution_pcb, tmm, swap);
+
+    // Se actualizan la impresión RAM y TMM
+    print_ram(gui->inner_ram, ram_disp);
+    print_tmm(gui->inner_tmm, *tmm);
   }
 }
 
@@ -135,15 +143,14 @@ void load_to_ram(PCB *pcb_execution, TMM *tmm, FILE *swap, Address address)
   // Recorre la TMM en busca del primer marco libre en RAM
   for (int i = 0; i < MAX_PAGES_RAM; i++)
   {
-    // Página disponible
+    // Página disponible en RAM
     if (!tmm->table[i])
     {
-      int index_page_from_tms = pcb_execution->PC / PAGE_SIZE;
-      int page_from_swap = pcb_execution->tmp.inSWAP[index_page_from_tms];
+      int page_from_swap = pcb_execution->tmp.inSWAP[address.base_page];
 
-      // Copiar el marco en cuestión de la SWAP a la RAM con una sola instrucción fread.7
+      // Copiar el marco en cuestión de la SWAP a la RAM con una sola instrucción fread.
       fseek(swap, page_from_swap * PAGE_JUMP, SEEK_SET); // Se ubica el puntero en la swap para leer el marco en la ram
-      fread(RAM[i*PAGE_SIZE], sizeof(char), PAGE_JUMP, swap); // Lee 512 bytes = 1 página
+      fread(RAM[i*PAGE_SIZE], sizeof(char), PAGE_JUMP, swap); // Lee 512 bytes = 1 página y se almacena en el buffer
       
       // Actualizar la TMM con el PID del proceso que ahora ocupa el marco de RAM
       tmm->table[i] = pcb_execution->pid;
@@ -233,8 +240,10 @@ void load_to_ready(PCB *process, Queue *ready, TMS *tms, FILE **swap)
 
   // Se reserva espacio para la TMP del proceso y se inicializa inRAM y ram_presence
   process->tmp.inSWAP = (int *)malloc(sizeof(int) * process->TmpSize);
-  memset(process->tmp.inRAM, -1, MAX_PAGES_RAM * sizeof(int));  // -1 = La pagina no ha sido mapeada a una dirección real en RAM
-  memset(process->tmp.ram_presence, 0, MAX_PAGES_RAM * sizeof(int)); 
+  process->tmp.inRAM = (int *)malloc(sizeof(int) * process->TmpSize);
+  process->tmp.ram_presence = (int *)malloc(sizeof(int) * process->TmpSize);
+  memset(process->tmp.inRAM, -1, process->TmpSize* sizeof(int));  // -1 = La pagina no ha sido mapeada a una dirección real en RAM
+  memset(process->tmp.ram_presence, 0, process->TmpSize * sizeof(int)); 
 
   // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
   load_to_swap(process, tms, swap, process->lines);
