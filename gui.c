@@ -390,8 +390,7 @@ void print_ram(WINDOW *inner_ram, int ram_disp)
     for (int instruction = 0; instruction < PAGE_SIZE; instruction++)
     {
       mvwprintw(inner_ram, instruction + 1, ((page + 1) * WIDTH_RAM / 2)-27, "[%02X]%.12s", (ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction, RAM[(ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction]);
-    }
-    
+    }   
   }
   // Refresca la subventana de RAM
   wrefresh(inner_ram);

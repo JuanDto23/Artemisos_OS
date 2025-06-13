@@ -44,7 +44,9 @@ void run_simulator(void)
   FILE *swap = NULL; // Bloque contiguo de almacenamiento binario en disco duro
   TMS tms;           // Estructura con tabla de marcos de SWAP y número de páginas disponibles
   TMM tmm;           // Estructura con tabla de marcos de memoria y número de páginas disponibles
-
+  tmm.available_pages = 16; // Al principio todas las páginas están ocupadas
+  int clock = -1;  // Apunta al renglón de la TMM de la siguiente página disponible una vez ocurrió un deshalojo
+                   // El reloj comienza a moverse con el primer deshalojo (podemos pensarlo como el renglón donde se imprime *)
   // Variables para la navegacción de la SWAP, TMS, TMP y Listas
   int swap_disp = 0;  // Desplazamiento de SWAP
   int tms_disp = 0;   // Desplazamiento de TMS
@@ -118,7 +120,7 @@ void run_simulator(void)
     else
     {
       // Se lee una instrucción del proceso en ejecución desde la RAM
-      read_inst_from_ram(&gui, ram_disp, instruction, execution.head, &tmm, swap);
+      read_inst_from_ram(&gui, ram_disp, instruction, execution.head, &tmm, swap, &clock);
       //read_inst_from_swap(swap, instruction, execution.head);
 
       /* Si no hay más instrucciones del proceso en ejecución, esto es,

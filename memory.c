@@ -110,7 +110,7 @@ void read_inst_from_swap(FILE *swap, char *instruction, PCB *execution_pcb)
 
 /* Lee una instrucción de la RAM, almacena la instrucción en el buffer instruction y realiza
    las acciones necesarias cuando la página de la instrucción no se encuentra en RAM (fallo de pagión) */
-void read_inst_from_ram(GUI *gui, int ram_disp, char *instruction, PCB *execution_pcb, TMM *tmm, FILE *swap)
+void read_inst_from_ram(GUI *gui, int ram_disp, char *instruction, PCB *execution_pcb, TMM *tmm, FILE *swap, int *clock)
 {
   Address address_instruction = {0};
   if (!execution_pcb)
@@ -128,9 +128,9 @@ void read_inst_from_ram(GUI *gui, int ram_disp, char *instruction, PCB *executio
   else // Fallo de paginación
   {
     // Deberá buscar el primer marco libre en RAM, para cargar el proceso.
-    load_to_ram(execution_pcb, tmm, swap, address_instruction);
+    load_to_ram(execution_pcb, tmm, swap, address_instruction, clock);
     // Se llama porque en este punto ya existe un mapeo de marco de la instrucción a ejecutar en RAM
-    read_inst_from_ram(gui, ram_disp, instruction, execution_pcb, tmm, swap);
+    read_inst_from_ram(gui, ram_disp, instruction, execution_pcb, tmm, swap,clock);
 
     // Se actualizan la impresión RAM y TMM
     print_ram(gui->inner_ram, ram_disp);
@@ -138,7 +138,7 @@ void read_inst_from_ram(GUI *gui, int ram_disp, char *instruction, PCB *executio
   }
 }
 
-void load_to_ram(PCB *pcb_execution, TMM *tmm, FILE *swap, Address address)
+void load_to_ram(PCB *pcb_execution, TMM *tmm, FILE *swap, Address address, int * clock)
 {
   // Recorre la TMM en busca del primer marco libre en RAM
   for (int i = 0; i < MAX_PAGES_RAM; i++)
@@ -157,16 +157,25 @@ void load_to_ram(PCB *pcb_execution, TMM *tmm, FILE *swap, Address address)
 
       // Establecer el indicador de Referencia en 1 (dado que se acaba de utilizar ese marco).
       tmm->referenced[i] = 1;
+      tmm->available_pages--; // Pagina ocupada
 
       // Actualizar la TMP del proceso, indicando en que marco de la RAM se encuentra el marco actual del proceso.
       pcb_execution->tmp.inRAM[address.base_page] = i;
 
       // Y establecer en 1 el valor de presencia (Ya se cargó, ya está presente).
       pcb_execution->tmp.ram_presence[address.base_page] = 1;
+      
+      // El reloj solo se mueve despues del primer desalojo (al menos las 12 primeras páginas no las mueve)
+      if(*clock != -1)
+      {
+        (*clock)++;
+      }
       return ;
     } 
   }
   // Si no hay marcos libres, deberá desalojar alguno, auxiliado de la TMM y el algoritmo de reloj.
+  clock_algorithm(tmm, clock); // Establece la presencia de algun marco en la tmm como 0 para poder cargar la página que se necesita
+  return;               // Ocupa de una llamada recursiva, solo prepara las condiciones para que despues entre la página
 }
 
 // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
@@ -271,4 +280,33 @@ void update_pages_from_tms(PCB *brothe_process, TMS *tms)
   {
     tms->table[brothe_process->tmp.inRAM[i]] = brothe_process->pid;
   }
+}
+
+// "Libera" una página de la RAM para poder cargar la página apuntada por PC
+// Cuando encuentra un 1, pone en 0 los 16 renglones de la TMM comenzando por el primer marco donde encontró el primer 1
+// de tal forma el el marco donde encontró el 1 será el que alojará la nuevo paǵina que ocasionó el deshalojo (le da la vuelta con %)
+void clock_algorithm(TMM * tmm, int * clock)
+{
+  if(*clock == -1)  // Apenas se producirá el primer desalojo
+    *(clock)++;
+  int count = 0;  // Cuenta el número de renglones modificados en la TMM
+
+  // Primer renglón se fuerza el cambio a 1, a partir de ese 15 mas como consecuencia
+  while(true)
+  {
+    if(tmm ->referenced[(*clock)%PAGE_SIZE]) // Marca 16 0's comenzando por el marco con el primer 1 encontrado
+    {
+      tmm -> referenced[(*clock)%PAGE_SIZE] = 0;  // Se marca la primera página como disponible
+      count++;  // Leva un cambio en la TMM
+      (*clock)++; // Los 15 cambios restantes comienzan en el siguiente renglón de la tmm
+      break;
+    }
+    (*clock)++;
+  }
+  for(;count<MAX_PAGES_RAM; count++)
+  {
+    tmm -> referenced[(*clock) % PAGE_SIZE] = 0;  // Se marca la primera página como disponible
+    (*clock)++;
+  }
+  // Tengo duda si el clock pudiera desbordarse
 }
