@@ -461,7 +461,8 @@ void print_tmm(WINDOW *inner_tmm, TMM tmm)
   // Imprime las páginas de la TMM conforme al desplazamiento
   for (int page = 0; page < DISPLAYED_PAGES_TMS; page++)
   {
-    mvwprintw(inner_tmm, page + 1, 0, "%X  %d  %d", page, tmm.table[page], tmm.referenced[page]);
+    mvwprintw(inner_tmm, page + 1, 0, "%X  %d  %d", page, tmm.table[page], tmm.referenced[page]); // Yo solo modifiqué la referencia pero los pids de los procesos que antes estaban, se quitan -_-
+                                                                                                  // Se solucionó cambiando tmm->table[i] por tmm->referenced[i]
   }
 
   // Refresca la subventana de TMS

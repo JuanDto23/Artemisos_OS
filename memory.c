@@ -144,7 +144,7 @@ void load_to_ram(PCB *pcb_execution, TMM *tmm, FILE *swap, Address address, int 
   for (int i = 0; i < MAX_PAGES_RAM; i++)
   {
     // Página disponible en RAM
-    if (!tmm->table[i])
+    if (!tmm->referenced[i] ) // El pid no se quitó, si la referencia es vacia =  pagina disponible
     {
       int page_from_swap = pcb_execution->tmp.inSWAP[address.base_page];
 
@@ -166,7 +166,7 @@ void load_to_ram(PCB *pcb_execution, TMM *tmm, FILE *swap, Address address, int 
       pcb_execution->tmp.ram_presence[address.base_page] = 1;
       
       // El reloj solo se mueve despues del primer desalojo (al menos las 12 primeras páginas no las mueve)
-      if(*clock != -1)
+      if((*clock) != -1)
       {
         (*clock)++;
       }
@@ -287,8 +287,9 @@ void update_pages_from_tms(PCB *brothe_process, TMS *tms)
 // de tal forma el el marco donde encontró el 1 será el que alojará la nuevo paǵina que ocasionó el deshalojo (le da la vuelta con %)
 void clock_algorithm(TMM * tmm, int * clock)
 {
-  if(*clock == -1)  // Apenas se producirá el primer desalojo
-    *(clock)++;
+  if((*clock) == -1)     // Apenas se producirá el primer desalojo
+    (*clock)++;
+
   int count = 0;  // Cuenta el número de renglones modificados en la TMM
 
   // Primer renglón se fuerza el cambio a 1, a partir de ese 15 mas como consecuencia
@@ -297,12 +298,13 @@ void clock_algorithm(TMM * tmm, int * clock)
     if(tmm ->referenced[(*clock)%PAGE_SIZE]) // Marca 16 0's comenzando por el marco con el primer 1 encontrado
     {
       tmm -> referenced[(*clock)%PAGE_SIZE] = 0;  // Se marca la primera página como disponible
-      count++;  // Leva un cambio en la TMM
+      count++; 
       (*clock)++; // Los 15 cambios restantes comienzan en el siguiente renglón de la tmm
       break;
     }
     (*clock)++;
   }
+  
   for(;count<MAX_PAGES_RAM; count++)
   {
     tmm -> referenced[(*clock) % PAGE_SIZE] = 0;  // Se marca la primera página como disponible
