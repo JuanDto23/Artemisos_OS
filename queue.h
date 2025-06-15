@@ -37,5 +37,6 @@ PCB *search_process_fits_swap(Queue *new, int avalible_pages);
 PCB *search_brother_process(int uid, char *filename, Queue queue);
 int get_minor_priority(Queue queue);
 int get_KCPUxU(int uid, Queue queue);
+bool update_tmp_after_eviction(int clock, int pid, Queue *queue);
 
 #endif

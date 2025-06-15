@@ -450,7 +450,7 @@ void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp)
 }
 
 // Imprime el contenido de la TMM con desplazamiento
-void print_tmm(WINDOW *inner_tmm, TMM tmm) 
+void print_tmm(WINDOW *inner_tmm, TMM tmm, int clock) 
 {
   // Se limpia la subventana de la TMS
   werase(inner_tmm);
@@ -461,13 +461,16 @@ void print_tmm(WINDOW *inner_tmm, TMM tmm)
   // Imprime las páginas de la TMM conforme al desplazamiento
   for (int page = 0; page < DISPLAYED_PAGES_TMS; page++)
   {
-    mvwprintw(inner_tmm, page + 1, 0, "%X  %d  %d", page, tmm.table[page], tmm.referenced[page]); // Yo solo modifiqué la referencia pero los pids de los procesos que antes estaban, se quitan -_-
-                                                                                                  // Se solucionó cambiando tmm->table[i] por tmm->referenced[i]
+    if (page != clock)
+      mvwprintw(inner_tmm, page + 1, 0, "%X  %2d %2d", page, tmm.table[page], tmm.referenced[page]);
+    else
+      mvwprintw(inner_tmm, page + 1, 0, "%X  %2d %2d*", page, tmm.table[page], tmm.referenced[page]);                                                                                    
   }
 
   // Refresca la subventana de TMS
   wrefresh(inner_tmm);
 }
+
 // Imprime el historial de comandos en la subventana de prompt
 void print_history(char buffers[HISTORY_SIZE][PROMPT_SIZE], WINDOW *inner_prompt)
 {

@@ -125,7 +125,7 @@ void print_swap(WINDOW *inner_swap, FILE *swap, int swap_disp);
 void print_ram(WINDOW *inner_ram, int ram_disp);
 void print_tms(WINDOW *inner_tms, TMS tms, int tms_disp);
 void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp);
-void print_tmm(WINDOW *inner_tmm, TMM tmm);
+void print_tmm(WINDOW *inner_tmm, TMM tmm, int clock);
 
 void print_history(char buffers[HISTORY_SIZE][PROMPT_SIZE], WINDOW *inner_prompt);
 

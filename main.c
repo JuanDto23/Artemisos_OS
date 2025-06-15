@@ -44,10 +44,10 @@ void run_simulator(void)
   FILE *swap = NULL; // Bloque contiguo de almacenamiento binario en disco duro
   TMS tms;           // Estructura con tabla de marcos de SWAP y número de páginas disponibles
   TMM tmm;           // Estructura con tabla de marcos de memoria y número de páginas disponibles
-  tmm.available_pages = 16; // Al principio todas las páginas están ocupadas
-  int clock = -1;  // Apunta al renglón de la TMM de la siguiente página disponible una vez ocurrió un deshalojo
-                   // El reloj comienza a moverse con el primer deshalojo (podemos pensarlo como el renglón donde se imprime *)
-  // Variables para la navegacción de la SWAP, TMS, TMP y Listas
+  
+  int clock = 0;  // El Algoritmo de Reloj, mantendrá un índice que iniciará en 0
+                   
+  // Variables para la navegación de la SWAP, TMS, TMP y Listas
   int swap_disp = 0;  // Desplazamiento de SWAP
   int tms_disp = 0;   // Desplazamiento de TMS
   int tmp_disp = 0;   // Desplazamiento de TMP
@@ -79,7 +79,7 @@ void run_simulator(void)
   print_tms(gui.inner_tms, tms, tms_disp);                                     // Imprime el contenido de la TMS con desplazamiento
   print_tmp(gui.inner_tmp, execution.head, tmp_disp);                          // Imprime el contenido de la TMP con desplazamiento
   initialize_tmm(&tmm);                                                        // Inicializar tabla de marcos de memoria (TMM)
-  print_tmm(gui.inner_tmm, tmm);                                               // Imprime el contenido de la TMS con desplazamiento
+  print_tmm(gui.inner_tmm, tmm, clock);                                               // Imprime el contenido de la TMS con desplazamiento
   print_ram(gui.inner_ram, ram_disp);  
 
   // Ciclo principal del simulador
@@ -120,7 +120,7 @@ void run_simulator(void)
     else
     {
       // Se lee una instrucción del proceso en ejecución desde la RAM
-      read_inst_from_ram(&gui, ram_disp, instruction, execution.head, &tmm, swap, &clock);
+      read_inst_from_ram(&gui, ram_disp, instruction, execution.head, &tmm, swap, &clock, &execution, &ready);
       //read_inst_from_swap(swap, instruction, execution.head);
 
       /* Si no hay más instrucciones del proceso en ejecución, esto es,

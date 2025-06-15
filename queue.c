@@ -41,7 +41,7 @@ PCB *create_pcb(int pid, char *file_name, FILE **program, int uid, int TmpSize, 
 
     // Inicialización de parámetros de memoria
     pcb->TmpSize = TmpSize;
-    pcb->tmp.inSWAP= NULL;
+    pcb->tmp.inSWAP = NULL;
     pcb->lines = lines;
   }
 
@@ -119,7 +119,7 @@ void free_queues(Queue *execution, Queue *ready, Queue *finished, Queue *new)
   kill_queue(execution);
   kill_queue(ready);
   kill_queue(finished);
-  
+
   // Los procesos en Nuevos necesitan cerrar sus archivos también
   while (new->head)
   {
@@ -353,4 +353,37 @@ int get_KCPUxU(int uid, Queue queue)
     return current->KCPUxU; // Se encontró el usuario en la cola
   }
   return -1; // La cola está vacía o no se encontró el usuario
+}
+
+bool update_tmp_after_eviction(int clock, int pid, Queue *queue)
+{
+  PCB *current = NULL;
+  int found = false;
+
+  current = queue->head;
+  while (current && !found)
+  {
+    // Se comprueba que el id usuario coincida con el dueño del nodo actual
+    found = (current->pid == pid);
+    if (!found)
+    {
+      // Se avanza al siguiente nodo de la lista
+      current = current->next;
+    }
+  }
+  if (current)
+  {
+    /* Buscar el proceso que estaba ocupando ese marco en RAM e indicar en su TMP,
+       que ese marco ya no se encuentra cargado en RAM (desalojado). */
+    for (int i = 0; i < current->TmpSize; i++)
+    {
+      if (current->tmp.inRAM[i] == clock)
+      {
+        current->tmp.ram_presence[i] = 0; // Presencia = 0
+        current->tmp.inRAM[i] = -1;       // Marco en RAM = -1
+        return true;
+      }
+    }
+  }
+  return false;
 }
