@@ -52,7 +52,8 @@ void read_inst_from_ram(GUI *gui, int ram_disp, char *instruction, PCB * executi
                         TMM * tmm, FILE *swap, int * clock, Queue *execution, Queue *ready);
 
 // Función para cargar instrucciones en la RAM y registrar en TMM los marcos ocupados por el proceso
-void load_to_ram(PCB * pcb_execution, TMM * tmm, FILE * swap, Address address, int * clock, Queue *execution, Queue *ready);
+void load_to_ram(GUI *gui, PCB * pcb_execution, TMM * tmm, FILE * swap, 
+                 Address address, int * clock, Queue *execution, Queue *ready);
 
 // Función para cargar instrucciones en la SWAP y registrar en TMS los marcos ocupados por el proceso
 void load_to_swap(PCB *new_process, TMS *tms, FILE **swap, int lines);
@@ -67,6 +68,6 @@ void free_pages_from_tms(PCB *pcb_finished, TMS * tms);
 void update_pages_from_tms(PCB *brother_process, TMS * tms);
 
 // Función para el desalojo de páginas cuando la RAM se llenó
-void clock_algorithm(TMM *tmm, int *clock, Queue *execution, Queue *ready);
+void clock_algorithm(GUI *gui, TMM *tmm, int *clock, Queue *execution, Queue *ready);
 
 #endif

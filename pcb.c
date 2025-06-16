@@ -99,7 +99,7 @@ int value_register(PCB *pcb, char r)
 }
 
 // Interpreta y ejecuta la instrucción leída de una línea del archivo de programa de un pcb
-int interpret_instruction(GUI *gui, char *instruction, PCB *pcb)
+int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS * tms, TMM *tmm, Queue * execution, Queue * finished)
 {
   /* TOKENS */
   char mnemonic[10] = {0}; // Mnemónico de la instrucción
@@ -245,15 +245,15 @@ int interpret_instruction(GUI *gui, char *instruction, PCB *pcb)
       /* Se limpia área de mensajes con wclear para que redibuje todo
          y no queden residuos de carácteres */
       wclear(gui->inner_msg);
-      // Si la instrucción es INC o DEC, se indica que hay exceso de parámetros
-      if (!strcmp(mnemonic, "INC") || !strcmp(mnemonic, "DEC"))
+      // Si la instrucción es INC, DEC o JNZ, se indica que hay exceso de parámetros
+      if (!strcmp(mnemonic, "INC") || !strcmp(mnemonic, "DEC") || !strcmp(mnemonic, "JNZ"))
         mvwprintw(gui->inner_msg, 0, 0, "Error: instrucción \"%s\" execeso de parámetros.", mnemonic);
       else // Si no, se indica que la instrucción no fue encontrada
         mvwprintw(gui->inner_msg, 0, 0, "Error: instrucción inválida \"%s\".", mnemonic);
       return -1; // Sintaxis de instrucción incorrecta
     }
   }
-  else if (items == 2) // Instrucciones de 2 paŕametros (INC, DEC)
+  else if (items == 2) // Instrucciones de 2 paŕametros (INC, DEC, JNZ)
   {
     if (!strcmp(mnemonic, "INC"))
     {
@@ -276,6 +276,22 @@ int interpret_instruction(GUI *gui, char *instruction, PCB *pcb)
         pcb->CX -= 1;
       else
         pcb->DX -= 1;
+    }
+    else if (!strcmp(mnemonic, "JNZ"))
+    {
+      int is_num_p1 = is_numeric(p1);
+      // JNZ ## - Brinca a la instrucción ## si el registro CX!=0
+      // Se comprueba si el primer parámetro existe y es un número
+      if (pcb->CX != 0 && is_num_p1) 
+      {
+        // Se extrae número del primer parámetro
+        int number_p1 = atoi(p1);
+        // Se comprueba que no haya violación de segmento
+        if(number_p1 > -1 && number_p1 < pcb->lines)
+          pcb->PC = number_p1;
+        else ;
+          // handle_process_termination
+      }
     }
     else // Si la instrucción no es INC o DEC
     {

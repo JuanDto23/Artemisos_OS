@@ -148,7 +148,7 @@ void run_simulator(void)
       else // Si hay más líneas por leer
       {
         // Interpreta y ejecuta la instrucción
-        result_interpretation = interpret_instruction(&gui, instruction, execution.head);
+        result_interpretation = interpret_instruction(&gui, instruction, execution.head, &tms, &tmm, &execution, &finished);
 
         if (result_interpretation != 0 && result_interpretation != -1) // Instrucción ejecutada correctamente
         {

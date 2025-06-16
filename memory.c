@@ -110,8 +110,8 @@ void read_inst_from_swap(FILE *swap, char *instruction, PCB *execution_pcb)
 
 /* Lee una instrucción de la RAM, almacena la instrucción en el buffer instruction y realiza
    las acciones necesarias cuando la página de la instrucción no se encuentra en RAM (fallo de pagión) */
-void read_inst_from_ram(GUI *gui, int ram_disp, char *instruction, PCB *execution_pcb, TMM *tmm, 
-                        FILE *swap, int *clock, Queue * execution, Queue * ready)
+void read_inst_from_ram(GUI *gui, int ram_disp, char *instruction, PCB *execution_pcb, TMM *tmm,
+                        FILE *swap, int *clock, Queue *execution, Queue *ready)
 {
   Address address_instruction = {0};
   if (!execution_pcb)
@@ -123,39 +123,39 @@ void read_inst_from_ram(GUI *gui, int ram_disp, char *instruction, PCB *executio
   if (execution_pcb->tmp.inRAM[address_instruction.base_page] > -1 && execution_pcb->tmp.ram_presence[address_instruction.base_page] == 1)
   {
     // Copiar la instrucción al buffer (instruction)
-    strcpy(instruction, RAM[execution_pcb->tmp.inRAM[address_instruction.base_page]*PAGE_SIZE + address_instruction.offset]);
+    strcpy(instruction, RAM[execution_pcb->tmp.inRAM[address_instruction.base_page] * PAGE_SIZE + address_instruction.offset]);
 
     // Se establece en 1 cada que se lea o escriba en dicho marco.
     tmm->referenced[execution_pcb->tmp.inRAM[address_instruction.base_page]] = 1;
-    return;
   }
   else // Fallo de paginación
   {
     // Deberá buscar el primer marco libre en RAM, para cargar el proceso.
-    load_to_ram(execution_pcb, tmm, swap, address_instruction, clock, execution, ready);
+    load_to_ram(gui, execution_pcb, tmm, swap, address_instruction, clock, execution, ready);
     // Se llama porque en este punto ya existe un mapeo de marco de la instrucción a ejecutar en RAM
     read_inst_from_ram(gui, ram_disp, instruction, execution_pcb, tmm, swap, clock, execution, ready);
-
-    // Se actualizan la impresión RAM y TMM
-    print_ram(gui->inner_ram, ram_disp);
-    print_tmm(gui->inner_tmm, *tmm, *clock);
   }
+
+  // Se actualizan la impresión RAM y TMM
+  print_ram(gui->inner_ram, ram_disp);
+  print_tmm(gui->inner_tmm, *tmm, *clock);
 }
 
-void load_to_ram(PCB *pcb_execution, TMM *tmm, FILE *swap, Address address, int *clock, Queue *execution, Queue *ready)
+void load_to_ram(GUI *gui, PCB *pcb_execution, TMM *tmm, FILE *swap,
+                 Address address, int *clock, Queue *execution, Queue *ready)
 {
   // Recorre la TMM en busca del primer marco libre en RAM
   for (int i = *clock; i < MAX_PAGES_RAM; i++)
   {
     // Página disponible en RAM
-    if (!tmm->referenced[i] ) // El pid no se quitó, si la referencia es vacia =  pagina disponible
+    if (!tmm->referenced[i]) // El pid no se quitó, si la referencia es vacia =  pagina disponible
     {
       int page_from_swap = pcb_execution->tmp.inSWAP[address.base_page];
 
       // Copiar el marco en cuestión de la SWAP a la RAM con una sola instrucción fread.
-      fseek(swap, page_from_swap * PAGE_JUMP, SEEK_SET); // Se ubica el puntero en la swap para leer el marco en la ram
-      fread(RAM[i*PAGE_SIZE], sizeof(char), PAGE_JUMP, swap); // Lee 512 bytes = 1 página y se almacena en el buffer
-      
+      fseek(swap, page_from_swap * PAGE_JUMP, SEEK_SET);        // Se ubica el puntero en la swap para leer el marco en la ram
+      fread(RAM[i * PAGE_SIZE], sizeof(char), PAGE_JUMP, swap); // Lee 512 bytes = 1 página y se almacena en el buffer
+
       // Actualizar la TMM con el PID del proceso que ahora ocupa el marco de RAM
       tmm->table[i] = pcb_execution->pid;
 
@@ -171,13 +171,16 @@ void load_to_ram(PCB *pcb_execution, TMM *tmm, FILE *swap, Address address, int 
 
       // Página ocupada
       tmm->available_pages--;
-      return ;
-    } 
+
+      // Se incrementa el puntero del reloj al siguiente marco del que se cargó
+      (*clock)++; (*clock) = (*clock) % MAX_PAGES_RAM;
+      return;
+    }
   }
 
   // Si no hay marcos libres, deberá desalojar alguno, auxiliado de la TMM y el algoritmo de reloj.
-  clock_algorithm(tmm, clock, execution, ready);
-  load_to_ram(pcb_execution,tmm, swap, address, clock, execution, ready);
+  clock_algorithm(gui, tmm, clock, execution, ready);
+  load_to_ram(gui, pcb_execution, tmm, swap, address, clock, execution, ready);
 }
 
 // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
@@ -253,8 +256,8 @@ void load_to_ready(PCB *process, Queue *ready, TMS *tms, FILE **swap)
   process->tmp.inSWAP = (int *)malloc(sizeof(int) * process->TmpSize);
   process->tmp.inRAM = (int *)malloc(sizeof(int) * process->TmpSize);
   process->tmp.ram_presence = (int *)malloc(sizeof(int) * process->TmpSize);
-  memset(process->tmp.inRAM, -1, process->TmpSize* sizeof(int));  // -1 = La pagina no ha sido mapeada a una dirección real en RAM
-  memset(process->tmp.ram_presence, 0, process->TmpSize * sizeof(int)); 
+  memset(process->tmp.inRAM, -1, process->TmpSize * sizeof(int)); // -1 = La pagina no ha sido mapeada a una dirección real en RAM
+  memset(process->tmp.ram_presence, 0, process->TmpSize * sizeof(int));
 
   // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
   load_to_swap(process, tms, swap, process->lines);
@@ -284,21 +287,22 @@ void update_pages_from_tms(PCB *brothe_process, TMS *tms)
   }
 }
 
-void clock_algorithm(TMM *tmm, int *clock, Queue *execution, Queue *ready)
+void clock_algorithm(GUI *gui, TMM *tmm, int *clock, Queue *execution, Queue *ready)
 {
   // Una vez encontrado el marco a desalojar (primer marco encontrado con Referencia == 0)
-  while (tmm->referenced[*clock] != 0) {
+  while (tmm->referenced[*clock] != 0)
+  {
     tmm->referenced[*clock] = 0;
-    (*clock)++;
-    (*clock) = (*clock) % MAX_PAGES_RAM;
+    (*clock)++; (*clock) = (*clock) % MAX_PAGES_RAM;
     tmm->available_pages++;
   }
 
   // Actualizar TMP del marco del proceso a desalojar
-  if (!update_tmp_after_eviction(*clock, tmm->table[*clock], execution)) {
+  if (!update_tmp_after_eviction(*clock, tmm->table[*clock], execution))
+  {
     update_tmp_after_eviction(*clock, tmm->table[*clock], ready);
   }
 
   // Busca el marco en cuestión en la TMM para marcarlo como vacío (PID = 0, Es decir, no ocupado por ningún proceso).
-  tmm->table[*clock] =0;
+  tmm->table[*clock] = 0;
 }

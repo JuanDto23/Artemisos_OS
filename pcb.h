@@ -67,7 +67,7 @@ void update_users(int uid, Queue queue);
 // Funciones para la interpretación de instrucciones leídas de un proceso
 int search_register(char *p);
 int value_register(PCB *pcb, char r);
-int interpret_instruction(GUI *gui, char *line, PCB *pcb);
+int interpret_instruction(GUI *gui, char *line, PCB *pcb, TMS * tms, TMM * tmm, Queue * execution, Queue * finished);
 
 // Función para la gestión de un proceso cuando termina
 void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution, Queue *ready,

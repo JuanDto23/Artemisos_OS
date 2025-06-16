@@ -441,7 +441,7 @@ void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp)
   // Imprime las direcciones de la TMP conforme al desplazamiento
   for (int address = 0; (tmp_disp * (DISPLAYED_ADRESSES_TMP) + address) < pcb->TmpSize && address < DISPLAYED_ADRESSES_TMP; address++)
   {
-    mvwprintw(inner_tmp, address + 1, 0, "%03X, %02X, %X, %03X", index_tmp, pcb->tmp.inRAM[index_tmp] & 0xFF, pcb->tmp.ram_presence[index_tmp], pcb->tmp.inSWAP[index_tmp]);
+    mvwprintw(inner_tmp, address + 1, 0, "%03X,  %02X,  %X,  %03X", index_tmp, pcb->tmp.inRAM[index_tmp] & 0xFF, pcb->tmp.ram_presence[index_tmp], pcb->tmp.inSWAP[index_tmp]);
     index_tmp++;
   }
 
@@ -456,15 +456,15 @@ void print_tmm(WINDOW *inner_tmm, TMM tmm, int clock)
   werase(inner_tmm);
 
   // Muestra el mensaje de "Marco-PID"
-  mvwprintw(inner_tmm, 0, 0, "Mr-PID-Pr");
+  mvwprintw(inner_tmm, 0, 0, "Mr-PID-Re");
 
   // Imprime las páginas de la TMM conforme al desplazamiento
   for (int page = 0; page < DISPLAYED_PAGES_TMS; page++)
   {
     if (page != clock)
-      mvwprintw(inner_tmm, page + 1, 0, "%X  %2d %2d", page, tmm.table[page], tmm.referenced[page]);
+      mvwprintw(inner_tmm, page + 1, 0, "%X, %2d, %d", page, tmm.table[page], tmm.referenced[page]);
     else
-      mvwprintw(inner_tmm, page + 1, 0, "%X  %2d %2d*", page, tmm.table[page], tmm.referenced[page]);                                                                                    
+      mvwprintw(inner_tmm, page + 1, 0, "%X, %2d, %d *", page, tmm.table[page], tmm.referenced[page]);                                                                                    
   }
 
   // Refresca la subventana de TMS
@@ -506,17 +506,18 @@ void clear_prompt(WINDOW *inner_prompt, int row)
 void print_traduction(WINDOW *inner_msg, PCB *current_process)
 {
   // Se limpia la subventana de mensajes
-  werase(inner_msg);
+  wclear(inner_msg);
 
   if (!current_process)
     return;
 
   mvwprintw(inner_msg, 0, 0, "Traduciendo dirección para PID:[%d].", current_process->pid);
 
-  Address address = address_traduction(current_process);
+  Address relative_address = address_traduction(current_process);
 
-  
-  mvwprintw(inner_msg, 2, 0, "PC:[%d] -> SWAP:[0x%X | 0x%X = 0x%X].", current_process->PC, address.base_page, address.offset, address.real);
+  int base_page = current_process->tmp.inRAM[relative_address.base_page] * PAGE_SIZE;
+
+  mvwprintw(inner_msg, 2, 0, "PC:[%d] -> SWAP:[0x%X | 0x%X = 0x%X].", current_process->PC, base_page, relative_address.offset, base_page | relative_address.offset) ;
 
   // Se refresca la subventana de mensajes
   wrefresh(inner_msg);
