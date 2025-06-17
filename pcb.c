@@ -270,7 +270,7 @@ int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS *tms, TMM *
         mvwprintw(gui->inner_msg, 0, 0, "Error: registro inválido \"%s\".", p1);
         return -1; // El primer parámetro es un registro inválido
       }
-      
+
       if (reg1 == 'A')
         pcb->AX += 1;
       else if (reg1 == 'B')
@@ -357,9 +357,6 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
 {
   PCB *brother_process = NULL; // Puntero para almacenar el hermano del proceso
 
-  // Se limpia el área de mensajes
-  werase(gui->inner_msg);
-
   // Si no queda ningún proceso hermano ya sea en Listos o en Ejecución
   if (!((brother_process = search_brother_process(current_process->UID, current_process->file_name, *ready)) ||
         (brother_process = search_brother_process(current_process->UID, current_process->file_name, *execution))))
@@ -383,6 +380,9 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
       {
         // Cargar el proceso a Listos
         load_to_ready(process_fits, ready, tms, swap);
+
+        // Se limpia el área de mensajes
+        werase(gui->inner_msg);
 
         // Se imprime mensaje de proceso de Nuevos encolado a Listos
         mvwprintw(gui->inner_msg, 0, 0, "Proceso: %d [%s] UID: [%d]", process_fits->pid, process_fits->file_name, process_fits->UID);
@@ -415,6 +415,8 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
   // Se muestran los cambios en la TMS y TMM
   print_tms(gui->inner_tms, *tms, tms_disp);
   print_tmm(gui->inner_tmm, *tmm, *clock);
+  // Se refresca la subventana de mensajes
+  wrefresh(gui->inner_msg);
 }
 
 // Recalcular prioridades de la cola de Listos y mostrar mensaje

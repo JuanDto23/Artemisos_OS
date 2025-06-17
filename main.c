@@ -142,8 +142,6 @@ void run_simulator(void)
         mvwprintw(gui.inner_msg, 0, 0, "Terminación anormal del programa.");
         // Se imprime procesador vacío
         empty_processor(gui.inner_cpu);
-        // Se refresca la subventana de mensajes
-        wrefresh(gui.inner_msg);
       }
       else // Si hay más líneas por leer
       {
@@ -185,8 +183,6 @@ void run_simulator(void)
           enqueue(process_extracted, &finished);
           // Se imprime procesador vacío
           empty_processor(gui.inner_cpu);
-          // Se refresca la subventana de mensajes
-          wrefresh(gui.inner_msg);
         }
         if (quantum == MAXQUANTUM) // quantum llegó a MAXQUANTUM y aún no se llega al fin del archivo
         {
