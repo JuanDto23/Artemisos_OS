@@ -99,7 +99,9 @@ int value_register(PCB *pcb, char r)
 }
 
 // Interpreta y ejecuta la instrucción leída de una línea del archivo de programa de un pcb
-int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS * tms, TMM *tmm, Queue * execution, Queue * finished)
+int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS *tms, TMM *tmm,
+                          Queue *execution, Queue *ready, Queue *finished, Queue *new,
+                          int *tms_disp, FILE **swap, int *clock)
 {
   /* TOKENS */
   char mnemonic[10] = {0}; // Mnemónico de la instrucción
@@ -132,16 +134,8 @@ int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS * tms, TMM 
   if (is_num_p2)
     number_p2 = atoi(p2); // Se extrae número del segundo parámetro
 
-  // Se comprueba que el primer parámetro sea un registro válido
+  // Se busca el registro del primer parámetro si lo hay
   int reg1 = search_register(p1);
-  if (reg1 == -1)
-  {
-    /* Se limpia área de mensajes con wclear para que redibuje todo
-       y no queden residuos de carácteres */
-    wclear(gui->inner_msg);
-    mvwprintw(gui->inner_msg, 0, 0, "Error: registro inválido \"%s\".", p1);
-    return -1; // El primer parámetro es un registro inválido
-  }
 
   // El segundo parámetro es un registro
   if (!is_num_p2 && p2[0] != '\0')
@@ -174,6 +168,16 @@ int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS * tms, TMM 
 
   if (items == 3) // Instrucciones de 3 paŕametros (MOV, ADD, SUB, MUL, DIV)
   {
+    // Se comprueba que el primer parámetro sea un registro válido
+    if (reg1 == -1)
+    {
+      /* Se limpia área de mensajes con wclear para que redibuje todo
+         y no queden residuos de carácteres */
+      wclear(gui->inner_msg);
+      mvwprintw(gui->inner_msg, 0, 0, "Error: registro inválido \"%s\".", p1);
+      return -1; // El primer parámetro es un registro inválido
+    }
+
     if (!strcmp(mnemonic, "MOV"))
     {
       if (reg1 == 'A')
@@ -257,6 +261,16 @@ int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS * tms, TMM 
   {
     if (!strcmp(mnemonic, "INC"))
     {
+      // Se comprueba que el primer parámetro sea un registro válido
+      if (reg1 == -1)
+      {
+        /* Se limpia área de mensajes con wclear para que redibuje todo
+           y no queden residuos de carácteres */
+        wclear(gui->inner_msg);
+        mvwprintw(gui->inner_msg, 0, 0, "Error: registro inválido \"%s\".", p1);
+        return -1; // El primer parámetro es un registro inválido
+      }
+      
       if (reg1 == 'A')
         pcb->AX += 1;
       else if (reg1 == 'B')
@@ -268,6 +282,16 @@ int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS * tms, TMM 
     }
     else if (!strcmp(mnemonic, "DEC"))
     {
+      // Se comprueba que el primer parámetro sea un registro válido
+      if (reg1 == -1)
+      {
+        /* Se limpia área de mensajes con wclear para que redibuje todo
+           y no queden residuos de carácteres */
+        wclear(gui->inner_msg);
+        mvwprintw(gui->inner_msg, 0, 0, "Error: registro inválido \"%s\".", p1);
+        return -1; // El primer parámetro es un registro inválido
+      }
+
       if (reg1 == 'A')
         pcb->AX -= 1;
       else if (reg1 == 'B')
@@ -281,16 +305,26 @@ int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS * tms, TMM 
     {
       int is_num_p1 = is_numeric(p1);
       // JNZ ## - Brinca a la instrucción ## si el registro CX!=0
-      // Se comprueba si el primer parámetro existe y es un número
-      if (pcb->CX != 0 && is_num_p1) 
+      if (pcb->CX != 0 && is_num_p1)
       {
         // Se extrae número del primer parámetro
         int number_p1 = atoi(p1);
         // Se comprueba que no haya violación de segmento
-        if(number_p1 > -1 && number_p1 < pcb->lines)
-          pcb->PC = number_p1;
-        else ;
-          // handle_process_termination
+        if (number_p1 > -1 && number_p1 < pcb->lines)
+          // Se resta -1 para que no se incremente después de terminar la función (como el caso de las otras instrucciones)
+          pcb->PC = number_p1 - 1;
+        else
+        {
+          // Se actualiza el número de usuarios (NumUs) y el peso W
+          update_users(pcb->UID, *ready);
+          // El proceso termina y se realiza la gestión necesaria
+          handle_process_termination(gui, pcb, execution, ready, new, tms, tmm, *tms_disp, swap, clock);
+          // Se encola el proceso en Terminados
+          enqueue(pcb, finished);
+          // Se imprime procesador vacío y se muestra mensaje
+          empty_processor(gui->inner_cpu);
+          mvwprintw(gui->inner_msg, 3, 0, "Violación de segmento. El proceso [%d] no tiene marco %d.", pcb->pid, number_p1 / PAGE_SIZE);
+        }
       }
     }
     else // Si la instrucción no es INC o DEC
@@ -319,7 +353,7 @@ int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS * tms, TMM 
 
 // Gestiona la terminación de un proceso en ejecución, actualizando las colas y la TMS
 void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution, Queue *ready,
-                                Queue *new, TMS *tms, int tms_disp, FILE **swap)
+                                Queue *new, TMS *tms, TMM *tmm, int tms_disp, FILE **swap, int *clock)
 {
   PCB *brother_process = NULL; // Puntero para almacenar el hermano del proceso
 
@@ -327,10 +361,14 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
   werase(gui->inner_msg);
 
   // Si no queda ningún proceso hermano ya sea en Listos o en Ejecución
-  if (!((brother_process = search_brother_process(current_process->UID, current_process->file_name, *ready)) || (brother_process = search_brother_process(current_process->UID, current_process->file_name, *execution))))
+  if (!((brother_process = search_brother_process(current_process->UID, current_process->file_name, *ready)) ||
+        (brother_process = search_brother_process(current_process->UID, current_process->file_name, *execution))))
   {
     // Establecer sus marcos de SWAP cómo libres en la TMS
     free_pages_from_tms(current_process, tms);
+    /* Indicar en la TMM que los marcos en RAM ya no están siendo
+    utilizados por proceso alguno, estableciendo en 0 tanto Proceso cómo Referencia. */
+    free_pages_from_tmm(current_process, tmm);
     // Liberar la memoria que ocupe la TMP asociada
     free(current_process->tmp.inSWAP);
     // Se pone a NULL la TMP del proceso para evitar puntero colgante
@@ -367,11 +405,16 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
     }
   }
   else // Si aún hay procesos hermanos
+  {
     // Actualiza el PID en TMS para el hermano encontrado que sigue vivo
     update_pages_from_tms(brother_process, tms);
+    // Actualizar TMM con el PID del hermano para indicar que la RAM ahora pertenece al él
+    update_pages_from_tmm(brother_process, tmm);
+  }
 
-  // Se muestran los cambios en la TMS
+  // Se muestran los cambios en la TMS y TMM
   print_tms(gui->inner_tms, *tms, tms_disp);
+  print_tmm(gui->inner_tmm, *tmm, *clock);
 }
 
 // Recalcular prioridades de la cola de Listos y mostrar mensaje

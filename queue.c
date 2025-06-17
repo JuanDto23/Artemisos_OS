@@ -4,6 +4,7 @@
 #include <ncurses.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <unistd.h>
 // Bibliotecas propias
 #include "queue.h"
 #include "pcb.h" // Se ocupa para la variable PBase

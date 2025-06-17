@@ -44,9 +44,9 @@ void run_simulator(void)
   FILE *swap = NULL; // Bloque contiguo de almacenamiento binario en disco duro
   TMS tms;           // Estructura con tabla de marcos de SWAP y número de páginas disponibles
   TMM tmm;           // Estructura con tabla de marcos de memoria y número de páginas disponibles
-  
-  int clock = 0;  // El Algoritmo de Reloj, mantendrá un índice que iniciará en 0
-                   
+
+  int clock = 0; // El Algoritmo de Reloj, mantendrá un índice que iniciará en 0
+
   // Variables para la navegación de la SWAP, TMS, TMP y Listas
   int swap_disp = 0;  // Desplazamiento de SWAP
   int tms_disp = 0;   // Desplazamiento de TMS
@@ -79,8 +79,8 @@ void run_simulator(void)
   print_tms(gui.inner_tms, tms, tms_disp);                                     // Imprime el contenido de la TMS con desplazamiento
   print_tmp(gui.inner_tmp, execution.head, tmp_disp);                          // Imprime el contenido de la TMP con desplazamiento
   initialize_tmm(&tmm);                                                        // Inicializar tabla de marcos de memoria (TMM)
-  print_tmm(gui.inner_tmm, tmm, clock);                                               // Imprime el contenido de la TMS con desplazamiento
-  print_ram(gui.inner_ram, ram_disp);  
+  print_tmm(gui.inner_tmm, tmm, clock);                                        // Imprime el contenido de la TMS con desplazamiento
+  print_ram(gui.inner_ram, ram_disp);
 
   // Ciclo principal del simulador
   do
@@ -91,8 +91,8 @@ void run_simulator(void)
       // Gestor de comandos de terminal
       command_handling(&gui, &exited, buffers, &index, &index_history,
                        &execution, &ready, &finished, &new,
-                       &timer, &init_timer, &speed_level, &tms,
-                       &swap, &swap_disp, &tms_disp, &tmp_disp, &lists_disp, &ram_disp, execution.head);
+                       &timer, &init_timer, &speed_level, &tms, &tmm,
+                       &swap, &swap_disp, &tms_disp, &tmp_disp, &lists_disp, &ram_disp, execution.head, &clock);
       // Verifica si hay nodos en la cola Listos
       if (ready.head)
       {
@@ -113,15 +113,15 @@ void run_simulator(void)
       // Gestor de comandos de terminal
       command_handling(&gui, &exited, buffers, &index, &index_history,
                        &execution, &ready, &finished, &new,
-                       &timer, &init_timer, &speed_level, &tms,
-                       &swap, &swap_disp, &tms_disp, &tmp_disp, &lists_disp, &ram_disp, execution.head);
+                       &timer, &init_timer, &speed_level, &tms, &tmm,
+                       &swap, &swap_disp, &tms_disp, &tmp_disp, &lists_disp, &ram_disp, execution.head, &clock);
     }
     // Si se alcanzó el MAX_TIME se ejecuta la instrucción
     else
     {
       // Se lee una instrucción del proceso en ejecución desde la RAM
       read_inst_from_ram(&gui, ram_disp, instruction, execution.head, &tmm, swap, &clock, &execution, &ready);
-      //read_inst_from_swap(swap, instruction, execution.head);
+      // read_inst_from_swap(swap, instruction, execution.head);
 
       /* Si no hay más instrucciones del proceso en ejecución, esto es,
       si no se encuentra END, lo que representa un error*/
@@ -132,7 +132,7 @@ void run_simulator(void)
         // Se extrae nodo en ejecución
         PCB *process_extracted = dequeue(&execution);
         // El proceso termina y se realiza la gestión necesaria, una vez se saca de ejecución
-        handle_process_termination(&gui, process_extracted, &execution, &ready, &new, &tms, tms_disp, &swap);
+        handle_process_termination(&gui, process_extracted, &execution, &ready, &new, &tms, &tmm, tms_disp, &swap, &clock);
         // Se encola a Terminados
         enqueue(process_extracted, &finished);
         /* Se limpia área de mensajes con wclear para que redibuje todo
@@ -148,7 +148,8 @@ void run_simulator(void)
       else // Si hay más líneas por leer
       {
         // Interpreta y ejecuta la instrucción
-        result_interpretation = interpret_instruction(&gui, instruction, execution.head, &tms, &tmm, &execution, &finished);
+        result_interpretation = interpret_instruction(&gui, instruction, execution.head, &tms, &tmm,
+                                                      &execution, &ready, &finished, &new, &tms_disp, &swap, &clock);
 
         if (result_interpretation != 0 && result_interpretation != -1) // Instrucción ejecutada correctamente
         {
@@ -179,7 +180,7 @@ void run_simulator(void)
           // Se extrae nodo en ejecución
           PCB *process_extracted = dequeue(&execution);
           // El proceso termina y se realiza la gestión necesaria, una vez se saca de ejecución
-          handle_process_termination(&gui, process_extracted, &execution, &ready, &new, &tms, tms_disp, &swap);
+          handle_process_termination(&gui, process_extracted, &execution, &ready, &new, &tms, &tmm, tms_disp, &swap, &clock);
           // Se encola a Terminados
           enqueue(process_extracted, &finished);
           // Se imprime procesador vacío

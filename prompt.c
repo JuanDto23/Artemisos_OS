@@ -44,8 +44,9 @@ void create_history(GUI *gui, char buffers[HISTORY_SIZE][PROMPT_SIZE], int *inde
 void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_SIZE],
                       int *index, int *index_history,
                       Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                      unsigned *timer, unsigned *init_timer, int *speed_level, TMS *tms, FILE **swap,
-                      int *swap_disp, int *tms_disp, int *tmp_disp, int * lists_disp, int * ram_disp, PCB *execution_pcb)
+                      unsigned *timer, unsigned *init_timer, int *speed_level, TMS *tms, TMM *tmm, FILE **swap,
+                      int *swap_disp, int *tms_disp, int *tmp_disp, int * lists_disp, int * ram_disp, PCB *execution_pcb, 
+                      int *clock)
 {
   int c = 0; // Carácter introducido por el usuario
   // Si se presionó una tecla en la terminal (kbhit)
@@ -59,7 +60,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
       buffers[0][*index] = '\0';
       // Se evalua el comando en buffer
       evaluate_command(gui, exited, buffers[0], execution, ready, finished,
-                       new, tms, swap, swap_disp, tms_disp, tmp_disp, lists_disp, ram_disp);
+                       new, tms, tmm, swap, swap_disp, tms_disp, tmp_disp, lists_disp, ram_disp, clock);
       // Se crea historial
       create_history(gui, buffers, index, index_history);
       // Se imprimen los buffers de historial
@@ -392,7 +393,7 @@ void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *r
 }
 
 void kill_command(char *parameter1, Queue *execution, Queue *ready, Queue *new, Queue *finished,
-                  TMS *tms, FILE **swap, int tms_disp, int lists_disp, GUI *gui)
+                  TMS *tms, TMM *tmm, FILE **swap, int tms_disp, int lists_disp, GUI *gui, int *clock)
 {
   int pid_to_search = 0; // Variable para almacenar el pid del proceso a matar
 
@@ -427,7 +428,7 @@ void kill_command(char *parameter1, Queue *execution, Queue *ready, Queue *new, 
     // Se actualiza el número de usuarios (NumUs) y el peso W
     update_users(process_extracted->UID, *ready);
     // El proceso termina y se realiza la gestión necesaria
-    handle_process_termination(gui, process_extracted, execution, ready, new, tms, tms_disp, swap);
+    handle_process_termination(gui, process_extracted, execution, ready, new, tms, tmm, tms_disp, swap, clock);
     // Se encola el proceso en Terminados
     enqueue(process_extracted, finished);
     // Se imprime procesador vacío y se muestra mensaje
@@ -440,7 +441,7 @@ void kill_command(char *parameter1, Queue *execution, Queue *ready, Queue *new, 
     // Se actualiza el número de usuarios (NumUs) y el peso W
     update_users(process_extracted->UID, *ready);
     // El proceso termina y se realiza la gestión necesaria
-    handle_process_termination(gui, process_extracted, execution, ready, new, tms, tms_disp, swap);
+    handle_process_termination(gui, process_extracted, execution, ready, new, tms, tmm, tms_disp, swap, clock);
     // Se encola el pcb en Terminados
     enqueue(process_extracted, finished);
     // Se imprime mensaje de terminación
@@ -495,7 +496,8 @@ int confirm_exit(GUI *gui)
 
 // Evalúa los comandos ingresados por el usuario
 void evaluate_command(GUI *gui, int *exited, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                      TMS *tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp, int *lists_disp, int *ram_disp)
+                      TMS *tms, TMM * tmm, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp, int *lists_disp, 
+                      int *ram_disp, int *clock)
 {
   /* TOKENS */
   char command[256] = {0};    // Almacena el comando ingresado
@@ -521,7 +523,7 @@ void evaluate_command(GUI *gui, int *exited, char *buffer, Queue *execution, Que
   else if (!strcmp(command, "KILL")) // Si el comando es KILL
   {
     kill_command(parameter1, execution, ready, new, finished,
-                 tms, swap, *tms_disp, *lists_disp, gui);
+                 tms, tmm, swap, *tms_disp, *lists_disp, gui, clock);
   }
   else // Si no es un comando válido
   {

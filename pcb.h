@@ -67,11 +67,12 @@ void update_users(int uid, Queue queue);
 // Funciones para la interpretación de instrucciones leídas de un proceso
 int search_register(char *p);
 int value_register(PCB *pcb, char r);
-int interpret_instruction(GUI *gui, char *line, PCB *pcb, TMS * tms, TMM * tmm, Queue * execution, Queue * finished);
+int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS *tms, TMM *tmm, Queue * execution, 
+                                Queue * ready, Queue * finished , Queue * new, int * tms_disp, FILE ** swap, int * clock);
 
 // Función para la gestión de un proceso cuando termina
 void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution, Queue *ready,
-                                Queue *new, TMS *tms, int tms_disp, FILE **swap);
+                                Queue *new, TMS *tms, TMM *tmm, int tms_disp, FILE **swap, int *clock);
 
 // Función para recalcular prioridades
 void recalculate_priorities(GUI *gui, Queue ready, int *minor_priority);

@@ -6,6 +6,7 @@ typedef struct queue Queue;
 typedef struct gui GUI;
 typedef struct tms TMS;
 typedef struct pcb PCB;
+typedef struct tmm TMM;
 
 // Valores numéricos obtenidos de kbwhat.c
 #define ENTER 10
@@ -32,17 +33,19 @@ void create_history(GUI *gui, char buffers[HISTORY_SIZE][PROMPT_SIZE], int *inde
 void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_SIZE],
                      int *index, int *index_history,
                      Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, FILE ** swap,
-                     int *swap_disp, int *tms_disp, int * tmp_disp,  int * lists_disp, int *ram_disp,  PCB *execution_pcb);
+                     unsigned *timer, unsigned *init_timer, int *speed_level, TMS * tms, TMM *tmm, FILE ** swap,
+                     int *swap_disp, int *tms_disp, int * tmp_disp,  int * lists_disp, int *ram_disp, PCB *execution_pcb,
+                     int *clock);
 
 // Funciones para la interpretación de comando de la prompt
 void load_command(char *parameter1, char *parameter2, Queue *execution, Queue *ready, Queue *new, Queue *finished,
                   TMS *tms, FILE **swap, int tms_disp, int swap_disp, int lists_disp, GUI *gui);
 void kill_command(char *parameter1, Queue *execution, Queue *ready, Queue *new, Queue *finished,
-                  TMS *tms, FILE **swap, int tms_disp, int lists_disp, GUI *gui);
+                  TMS *tms, TMM * tmm,  FILE **swap, int tms_disp, int lists_disp, GUI *gu, int *clock);
 void exit_command(int *exited, GUI *gui, Queue *execution, Queue *ready, Queue *new, Queue *finished);
 int confirm_exit(GUI *gui);
 void evaluate_command(GUI *gui, int *exited, char *buffer, Queue *execution, Queue *ready, Queue *finished, Queue *new,
-                     TMS *tms, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp, int *lists_disp,int *ram_disp);
+                     TMS *tms, TMM *tmm, FILE **swap, int *swap_disp, int *tms_disp, int *tmp_disp, int *lists_disp,
+                     int *ram_disp, int *clock);
 
 #endif

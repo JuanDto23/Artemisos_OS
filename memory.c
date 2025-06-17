@@ -130,9 +130,11 @@ void read_inst_from_ram(GUI *gui, int ram_disp, char *instruction, PCB *executio
   }
   else // Fallo de paginación
   {
+    // Si no hay marcos libres, deberá desalojar alguno, auxiliado de la TMM y el algoritmo de reloj.
+    clock_algorithm(tmm, clock, execution, ready);
     // Deberá buscar el primer marco libre en RAM, para cargar el proceso.
     load_to_ram(gui, execution_pcb, tmm, swap, address_instruction, clock, execution, ready);
-    // Se llama porque en este punto ya existe un mapeo de marco de la instrucción a ejecutar en RAM
+    // Se vuelve a llamar porque en este punto ya existe un mapeo de marco de la instrucción a ejecutar en RAM
     read_inst_from_ram(gui, ram_disp, instruction, execution_pcb, tmm, swap, clock, execution, ready);
   }
 
@@ -173,14 +175,11 @@ void load_to_ram(GUI *gui, PCB *pcb_execution, TMM *tmm, FILE *swap,
       tmm->available_pages--;
 
       // Se incrementa el puntero del reloj al siguiente marco del que se cargó
-      (*clock)++; (*clock) = (*clock) % MAX_PAGES_RAM;
+      (*clock)++;
+      (*clock) = (*clock) % MAX_PAGES_RAM;
       return;
     }
   }
-
-  // Si no hay marcos libres, deberá desalojar alguno, auxiliado de la TMM y el algoritmo de reloj.
-  clock_algorithm(gui, tmm, clock, execution, ready);
-  load_to_ram(gui, pcb_execution, tmm, swap, address, clock, execution, ready);
 }
 
 // Cargar instrucciones en swap y registrar en TMS los marcos ocupados por el proceso
@@ -273,31 +272,58 @@ void free_pages_from_tms(PCB *process_finished, TMS *tms)
 {
   for (int i = 0; i < process_finished->TmpSize; i++)
   {
-    tms->table[process_finished->tmp.inRAM[i]] = 0;
+    tms->table[process_finished->tmp.inSWAP[i]] = 0;
     (tms->available_pages)++;
   }
 }
 
-// Actualiza la tabla TMS con la UID de un proceso hermano
-void update_pages_from_tms(PCB *brothe_process, TMS *tms)
+// Marca como disponibles la páginas que ocupaba un proceso en la TMM, usando su TMP
+void free_pages_from_tmm(PCB *process_finished, TMM *tmm)
 {
-  for (int i = 0; i < brothe_process->TmpSize; i++)
+  for (int i = 0; i < process_finished->TmpSize; i++)
   {
-    tms->table[brothe_process->tmp.inRAM[i]] = brothe_process->pid;
+    if (process_finished->tmp.inRAM[i] != -1)
+    {
+      tmm->table[process_finished->tmp.inRAM[i]] = 0; // PID en 0 dado que ya no hay proceso cargado
+      tmm->referenced[process_finished->tmp.inRAM[i]] = 0; // En 0 porque ya no se utiliza el marco
+      (tmm->available_pages)++;
+    }
   }
 }
 
-void clock_algorithm(GUI *gui, TMM *tmm, int *clock, Queue *execution, Queue *ready)
+// Actualiza la tabla TMS con la UID de un proceso hermano
+void update_pages_from_tms(PCB *brother_process, TMS *tms)
+{
+  for (int i = 0; i < brother_process->TmpSize; i++)
+  {
+    tms->table[brother_process->tmp.inSWAP[i]] = brother_process->pid;
+  }
+}
+
+// Actualiza la tabla TMM con la UID de un proceso hermano
+void update_pages_from_tmm(PCB *brother_process, TMM *tmm)
+{
+  for (int i = 0; i < brother_process->TmpSize; i++)
+  {
+    if (brother_process->tmp.inRAM[i] != -1)
+    {
+      tmm->table[brother_process->tmp.inRAM[i]] = brother_process->pid;
+    }
+  }
+}
+
+void clock_algorithm(TMM *tmm, int *clock, Queue *execution, Queue *ready)
 {
   // Una vez encontrado el marco a desalojar (primer marco encontrado con Referencia == 0)
   while (tmm->referenced[*clock] != 0)
   {
     tmm->referenced[*clock] = 0;
-    (*clock)++; (*clock) = (*clock) % MAX_PAGES_RAM;
+    (*clock)++;
+    (*clock) = (*clock) % MAX_PAGES_RAM;
     tmm->available_pages++;
   }
 
-  // Actualizar TMP del marco del proceso a desalojar
+  // Actualizar TMP del marco del proceso a desalojar (en ejecución o en ready)
   if (!update_tmp_after_eviction(*clock, tmm->table[*clock], execution))
   {
     update_tmp_after_eviction(*clock, tmm->table[*clock], ready);

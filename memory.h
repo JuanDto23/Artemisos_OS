@@ -64,10 +64,16 @@ void load_to_ready(PCB *process, Queue *ready, TMS *tms, FILE **swap);
 // Función para liberar las páginas ocupadas por un proceso en la TMS
 void free_pages_from_tms(PCB *pcb_finished, TMS * tms);
 
+// Función para liberar las páginas ocupadas por un proceso en la TMM
+void free_pages_from_tmm(PCB *pcb_finished, TMM * tmm);
+
 // Función para actualizar las páginas ocupadas por un proceso hermano en la TMS
 void update_pages_from_tms(PCB *brother_process, TMS * tms);
 
+// Función para actualizar las páginas ocupadas por un proceso hermano en la TMM
+void update_pages_from_tmm(PCB *brother_process, TMM * tmm);
+
 // Función para el desalojo de páginas cuando la RAM se llenó
-void clock_algorithm(GUI *gui, TMM *tmm, int *clock, Queue *execution, Queue *ready);
+void clock_algorithm(TMM *tmm, int *clock, Queue *execution, Queue *ready);
 
 #endif
