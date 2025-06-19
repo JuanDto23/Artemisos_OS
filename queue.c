@@ -356,6 +356,7 @@ int get_KCPUxU(int uid, Queue queue)
   return -1; // La cola está vacía o no se encontró el usuario
 }
 
+// Actualiza el TMP de un proceso después de que se ha desalojado de la RAM
 bool update_tmp_after_eviction(int clock, int pid, Queue *queue)
 {
   PCB *current = NULL;

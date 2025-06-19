@@ -438,6 +438,7 @@ void recalculate_priorities(GUI *gui, Queue ready, int *minor_priority)
   sleep(2);
 }
 
+// Traduce la dirección virtual del proceso actual a una dirección real
 Address address_traduction(PCB *current_process)
 {
   Address address = {0};

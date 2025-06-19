@@ -68,7 +68,7 @@ void update_users(int uid, Queue queue);
 int search_register(char *p);
 int value_register(PCB *pcb, char r);
 int interpret_instruction(GUI *gui, char *instruction, PCB *pcb, TMS *tms, TMM *tmm, Queue * execution, 
-                                Queue * ready, Queue * finished , Queue * new, int * tms_disp, FILE ** swap, int * clock);
+                          Queue * ready, Queue * finished , Queue * new, int * tms_disp, FILE ** swap, int * clock);
 
 // Función para la gestión de un proceso cuando termina
 void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution, Queue *ready,

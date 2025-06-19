@@ -312,6 +312,7 @@ void update_pages_from_tmm(PCB *brother_process, TMM *tmm)
   }
 }
 
+// Algoritmo de reloj para desalojar páginas de la RAM cuando ocurre un fallo de paginación
 void clock_algorithm(TMM *tmm, int *clock, Queue *execution, Queue *ready)
 {
   // Una vez encontrado el marco a desalojar (primer marco encontrado con Referencia == 0)

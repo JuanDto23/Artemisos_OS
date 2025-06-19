@@ -331,7 +331,7 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new,
 
   // SECCIÓN TERMINADOS
   // Se imprimirá la sección de Terminados si estamos en su primer desplazamiento, o sea el último desplazamiento de Nuevos (disp_new)
-  if (lists_disp == last_disp_new)
+  if (lists_disp == last_disp_new || lists_disp == last_disp_new + 1)
   {
     for (int i = 0; i < WIDTH_QUEUES; i++)
     {
