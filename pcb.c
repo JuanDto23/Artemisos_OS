@@ -393,7 +393,7 @@ void handle_process_termination(GUI *gui, PCB *current_process, Queue *execution
         while ((brother_process = extract_brother_process(process_fits->UID, process_fits->file_name, new)))
         {
           // Asignar la misma TMP que su hermano
-          brother_process->tmp.inSWAP = process_fits->tmp.inSWAP;
+          brother_process->tmp = process_fits->tmp;
           // Se cierra el archivo del proceso hermano
           fclose(brother_process->program);
           // Se evita puntero colgante

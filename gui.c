@@ -159,6 +159,7 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new,
     elements_last_disp_ready = 0;
     // Se deplaza 14 renglones si el desplazamiento es mayor a 0
     if (disp_ready > 0)
+    {
       // Avanza el puntero de la cabeza de la cola de Listos
       for (int node = 0; node < total_rows_per_display && ready.head; node++)
       {
@@ -168,7 +169,9 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new,
         if (node == total_rows_per_display - 1)
           last_disp_ready++;
       }
+    }
     else // Se desplaza 11 renglones si el desplazamiento es 0
+    {
       // Avanza el puntero de la cabeza de la cola de Listos
       for (int node = 0; node < total_rows_per_display - 3 && ready.head; node++)
       {
@@ -178,6 +181,7 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new,
         if (node == (total_rows_per_display - 3) - 1)
           last_disp_ready++;
       }
+    }
   }
 
   last_disp_new = last_disp_ready; // Inicializa el último desplazamiento de Nuevos con el último de Listos
@@ -188,6 +192,7 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new,
     elements_last_disp_new = 0;
     // Se deplaza 14 renglones si el desplazamiento es mayor al último desplazamiento de Listos
     if (disp_new > last_disp_ready)
+    {
       // Avanza el puntero de la cabeza de la cola de Nuevo
       for (int node = 0; node < total_rows_per_display && new.head; node++)
       {
@@ -197,16 +202,28 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new,
         if (node == total_rows_per_display - 1)
           last_disp_new++;
       }
+    }
     else // Estamos en el último desplazamiento de Nuevos y en el primero de Nuevos
+    {
+      // Límte para saber cuántos nodos avanzar
+      int limit;
+      /* Si el desplazamiento es 0, contabiliza la sección de Ejecución, nodo en ejecución, sección de Listos,
+         últimos elementos de Listos y sección de Nuevos */
+      if (disp_new == 0)
+        limit = (total_rows_per_display - (4 + elements_last_disp_ready));
+      else // Si es otro desplazamiento, solo contabiliza los últimos elementos de Listos y sección de Nuevos
+        limit = (total_rows_per_display - (elements_last_disp_ready + 1));
+
       // Avanza el puntero de la cabeza de la cola de Nuevos
-      for (int node = 0; node < total_rows_per_display - (elements_last_disp_ready + 1) && new.head; node++)
+      for (int node = 0; node < limit && new.head; node++)
       {
         new.head = new.head->next; // Avanza al siguiente nodo de la cola
         elements_last_disp_new++;
         // Significa que se completó un desplazamiento
-        if (node == (total_rows_per_display - (elements_last_disp_ready + 1)) - 1)
+        if (node == limit - 1)
           last_disp_new++;
       }
+    }
   }
 
   last_disp_finished = last_disp_new; // Inicializa el último desplazamiento de Terminados con el último de Nuevos
@@ -217,6 +234,7 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new,
     // Se deplaza 14 renglones si el desplazamiento es mayor al último edsplazamiento de Nuevos
     elements_last_disp_finished = 0;
     if (disp_finished > last_disp_new)
+    {
       // Avanza el puntero de la cabeza de la cola de Terminados
       for (int node = 0; node < total_rows_per_display && finished.head; node++)
       {
@@ -226,16 +244,32 @@ void print_queues(WINDOW *inner_queues, Queue execution, Queue ready, Queue new,
         if (node == total_rows_per_display - 1)
           last_disp_finished++;
       }
+    }
     else // Estamos en el último desplazamiento de Nuevos y en el primero de Terminados
+    {
       // Avanza el puntero de la cabeza de la cola de Terminados
-      for (int node = 0; node < total_rows_per_display - (elements_last_disp_new + 1) && finished.head; node++)
+      int limit;
+      /* Si el desplazamiento es 0, contabiliza la sección de Ejecución, nodo en ejecución, sección de Listos,
+         últimos elementos de Listos, sección de Nuevos, últimos elementos de Nuevos y sección de Terminados */
+      if (disp_finished == 0)
+        limit = (total_rows_per_display - (5 + elements_last_disp_ready + elements_last_disp_new));
+      /* Si el desplazamiento es el último de Listos, contabiliza últimos elementos de Listos, sección de Nuevos,
+         últimos elementos de Nuevos y sección de Terminados */
+      else if (disp_finished == last_disp_ready)
+        limit = (total_rows_per_display - (elements_last_disp_ready + 1 + elements_last_disp_new + 1));
+      // Si es otro desplazamiento, solo contabiliza los últimos elementos de Nuevos y sección de Terminados
+      else
+        limit = (total_rows_per_display - (elements_last_disp_new + 1));
+
+      for (int node = 0; node < limit && finished.head; node++)
       {
         finished.head = finished.head->next; // Avanza al siguiente nodo de la cola
         elements_last_disp_finished++;
         // Significa que se completó un desplazamiento
-        if (node == (total_rows_per_display - (elements_last_disp_new + 1)) - 1)
+        if (node == limit - 1)
           last_disp_finished++;
       }
+    }
   }
 
   // SECCIÓN EJECUCIÓN
@@ -380,17 +414,17 @@ void print_ram(WINDOW *inner_ram, int ram_disp)
   werase(inner_ram);
   // Muestra información general fija de la RAM
   mvwprintw(inner_ram, 0, (WIDTH_RAM - strlen("[16] Marcos * [16] Inst * [32] Bytes = [8192] Bytes")) / 2, "[16] Marcos * [16]Inst * [32] Bytes = [8192] Bytes");
-  
+
   int instructions_per_disp = PAGE_SIZE * PAGES_RAM; // Instrucciones que llenan toda una ventana de RAM
-  
+
   // Recorrer paginas (columnas)
   for (int page = 0; page < PAGES_RAM; page++)
-  { 
+  {
     // Recorrer instrucciones (renglones)
     for (int instruction = 0; instruction < PAGE_SIZE; instruction++)
     {
-      mvwprintw(inner_ram, instruction + 1, ((page + 1) * WIDTH_RAM / 2)-27, "[%02X]%.12s", (ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction, RAM[(ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction]);
-    }   
+      mvwprintw(inner_ram, instruction + 1, ((page + 1) * WIDTH_RAM / 2) - 27, "[%02X]%.12s", (ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction, RAM[(ram_disp * instructions_per_disp + page * PAGE_SIZE) + instruction]);
+    }
   }
   // Refresca la subventana de RAM
   wrefresh(inner_ram);
@@ -450,7 +484,7 @@ void print_tmp(WINDOW *inner_tmp, PCB *pcb, int tmp_disp)
 }
 
 // Imprime el contenido de la TMM con desplazamiento
-void print_tmm(WINDOW *inner_tmm, TMM tmm, int clock) 
+void print_tmm(WINDOW *inner_tmm, TMM tmm, int clock)
 {
   // Se limpia la subventana de la TMS
   werase(inner_tmm);
@@ -464,7 +498,7 @@ void print_tmm(WINDOW *inner_tmm, TMM tmm, int clock)
     if (page != clock)
       mvwprintw(inner_tmm, page + 1, 0, "%X, %2d, %d", page, tmm.table[page], tmm.referenced[page]);
     else
-      mvwprintw(inner_tmm, page + 1, 0, "%X, %2d, %d *", page, tmm.table[page], tmm.referenced[page]);                                                                                    
+      mvwprintw(inner_tmm, page + 1, 0, "%X, %2d, %d *", page, tmm.table[page], tmm.referenced[page]);
   }
 
   // Refresca la subventana de TMS
@@ -517,7 +551,7 @@ void print_traduction(WINDOW *inner_msg, PCB *current_process)
 
   int base_page = current_process->tmp.inRAM[relative_address.base_page] * PAGE_SIZE;
 
-  mvwprintw(inner_msg, 2, 0, "PC:[%d] -> SWAP:[0x%X | 0x%X = 0x%X].", current_process->PC, base_page, relative_address.offset, base_page | relative_address.offset) ;
+  mvwprintw(inner_msg, 2, 0, "PC:[%d] -> SWAP:[0x%X | 0x%X = 0x%X].", current_process->PC, base_page, relative_address.offset, base_page | relative_address.offset);
 
   // Se refresca la subventana de mensajes
   wrefresh(inner_msg);

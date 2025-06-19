@@ -179,7 +179,7 @@ void command_handling(GUI *gui, int *exited, char buffers[HISTORY_SIZE][PROMPT_S
     else if (c == KEY_F(2)) // Avanza Colas (F2)
     {
       // Se calcula el total de deslazamientos de la ventana de colas en función de los elementos que haya
-      int total_lists_disp = (execution->elements + ready->elements + new->elements + finished->elements + 4) / (HEIGHT_QUEUES - 2);
+      int total_lists_disp = (execution->elements + ready->elements + new->elements + finished->elements + 4) / (HEIGHT_QUEUES - 1);
       if ((*lists_disp) < total_lists_disp)
       {
         (*lists_disp)++;
